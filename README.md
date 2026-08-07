@@ -4,6 +4,17 @@
 
 UniApp项目可使用的SDK
 
+## 文档导航
+
+在开始接入开发前，建议先阅读以下文档，可以帮助你快速上手：
+
+| 文档 | 说明 |
+| --- | --- |
+| [VeepooUniAppSDK 使用文档](docs/VeepooUniAppSDK使用文档.md) | 完整的 API 与功能说明，接入必读 |
+| [照片表盘传输简易流程图](docs/照片表盘传输简易流程图.pdf) | 表盘图片传输的整体流程示意（PDF） |
+
+> 提示：几乎所有功能在 [demo 示例工程](code/demo/uniappTSDemo) 中都有对应的示例页面，建议结合文档与 demo 一起参考。
+
 ### 1.概述
 
 
@@ -27,7 +38,7 @@ Uniapp无法兼容HarmonOS Next文档链接：[uni-app官网](https://uniapp.dcl
 
 
 
-为了帮助开发者快速接入，使用UniAppSDK，请开发前详细阅读 ”**VeepooUniAppSDK使用文档**“
+为了帮助开发者快速接入，使用UniAppSDK，请开发前详细阅读 **[VeepooUniAppSDK 使用文档](docs/VeepooUniAppSDK使用文档.md)**
 
 备注：所有功能都可以在demo中找到相关示例，请开发功能前参考demo，表盘传输，OTA等功能目前只支持杰里类型设备，其他设备暂不支持。
 
