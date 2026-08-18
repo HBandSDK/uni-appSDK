@@ -117,17 +117,17 @@
 			},
 
 			// 选择血压开关模式
-			bindPickerChange1: function (e) {
+			bindPickerChange1: function(e) {
 				console.log('picker1发送选择改变，携带值为', e.detail.value)
 				this.index = e.detail.value
 			},
 			// 夜间范围开始时间选择
-			bindPickerChange2: function (e) {
+			bindPickerChange2: function(e) {
 				console.log('picker2发送选择改变，携带值为', e.detail.value)
 				this.nightRangeStartTime = e.detail.value
 			},
 			// 夜间范围结束时间选择
-			bindPickerChange3: function (e) {
+			bindPickerChange3: function(e) {
 				console.log('picker3发送选择改变，携带值为', e.detail.value)
 				this.nightRangeEndTime = e.detail.value
 			},
@@ -135,9 +135,9 @@
 			// 监听订阅 notifyMonitorValueChange
 			notifyMonitorValueChange() {
 				let that = this;
-				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function (e) {
+				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log(" YM28PRO设置数据读取及下发 监听蓝牙回调=>", e);
-					if (e.type == 58) {
+					if (e.type == 59) {
 						if (e.control == '1' || e.control == '2') {
 							that.content = e.content
 						} else if (e.control == '3') {
@@ -178,5 +178,4 @@
 	input {
 		background-color: #e7e7e7;
 	}
-
 </style>

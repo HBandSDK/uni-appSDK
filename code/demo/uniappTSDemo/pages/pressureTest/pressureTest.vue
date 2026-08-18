@@ -75,17 +75,17 @@
 				let self = this;
 				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log("压力测量监听蓝牙回调=>", e);
-					// type 52 为压力测量数据类型（根据实际SDK文档调整）
-					if (e.type == 52) {
+					// type 58 为压力测量数据类型（根据实际SDK文档调整）
+					if (e.type == 58) {
 						let stressValue = e.content.stress || 0;
 						let stressLevelText = self.getStressLevelText(stressValue);
 
 						self.stress = stressValue;
 						self.stressLevel = stressLevelText
-					} else if (e.type == 53) {
+					} else if (e.type == 58 && e.Progress != 100) {
 						// 压力测量进度回调
 						console.log("压力测量进度:", e.content);
-					} else if (e.type == 54) {
+					} else if (e.type == 58 && e.Progress == 100) {
 						// 压力测量完成回调
 						self.isMeasuring = false
 						console.log("压力测量完成");

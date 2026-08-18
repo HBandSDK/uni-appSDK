@@ -136,7 +136,7 @@
 					console.log("监听蓝牙回调=>", e);
 					let content = e.content;
 
-					if (e.type == 23) {
+					if (e.type == 26) {
 						self.startTime = content.startTime
 						self.endTime = content.endTime
 						self.intervalTime = content.intervalTime

@@ -103,7 +103,10 @@
 				// @ts-ignore
 				plus.io.resolveLocalFileSystemURL('_doc/', (dirEntry) => {
 					const name = logPath.split('/').pop()
-					dirEntry.getFile(name, { create: true, exclusive: false }, (fileEntry) => {
+					dirEntry.getFile(name, {
+						create: true,
+						exclusive: false
+					}, (fileEntry) => {
 						cb(fileEntry)
 					}, () => cb(null))
 				}, () => cb(null))
@@ -116,20 +119,33 @@
 				fs.readFile({
 					filePath: logPath,
 					encoding: 'utf8',
-					success(res) { cb(res.data) },
-					fail() { cb('') }
+					success(res) {
+						cb(res.data)
+					},
+					fail() {
+						cb('')
+					}
 				})
 				// #endif
 				// #ifdef APP-PLUS
 				this._withLogEntry((fileEntry) => {
-					if (!fileEntry) { cb(''); return }
+					if (!fileEntry) {
+						cb('');
+						return
+					}
 					fileEntry.file((file) => {
 						// @ts-ignore
 						const reader = new plus.io.FileReader()
-						reader.onloadend = (e) => { cb((e.target && e.target.result) || '') }
-						reader.onerror = () => { cb('') }
+						reader.onloadend = (e) => {
+							cb((e.target && e.target.result) || '')
+						}
+						reader.onerror = () => {
+							cb('')
+						}
 						reader.readAsText(file, 'utf8')
-					}, () => { cb('') })
+					}, () => {
+						cb('')
+					})
 				})
 				// #endif
 				// #ifdef H5
@@ -144,17 +160,28 @@
 					filePath: logPath,
 					data: text,
 					encoding: 'utf8',
-					complete() { cb && cb() }
+					complete() {
+						cb && cb()
+					}
 				})
 				// #endif
 				// #ifdef APP-PLUS
 				this._withLogEntry((fileEntry) => {
-					if (!fileEntry) { cb && cb(); return }
+					if (!fileEntry) {
+						cb && cb();
+						return
+					}
 					fileEntry.createWriter((writer) => {
-						writer.onwrite = () => { cb && cb() }
-						writer.onerror = () => { cb && cb() }
+						writer.onwrite = () => {
+							cb && cb()
+						}
+						writer.onerror = () => {
+							cb && cb()
+						}
 						writer.write(text)
-					}, () => { cb && cb() })
+					}, () => {
+						cb && cb()
+					})
 				})
 				// #endif
 				// #ifdef H5
@@ -169,27 +196,46 @@
 					filePath: logPath,
 					data: text,
 					encoding: 'utf8',
-					success() { cb(true) },
-					fail() { cb(false) }
+					success() {
+						cb(true)
+					},
+					fail() {
+						cb(false)
+					}
 				})
 				// #endif
 				// #ifdef APP-PLUS
 				this._withLogEntry((fileEntry) => {
-					if (!fileEntry) { cb(false); return }
+					if (!fileEntry) {
+						cb(false);
+						return
+					}
 					fileEntry.file((file) => {
 						// @ts-ignore
 						const reader = new plus.io.FileReader()
 						const doWrite = (prev) => {
 							fileEntry.createWriter((writer) => {
-								writer.onwrite = () => { cb(true) }
-								writer.onerror = () => { cb(false) }
+								writer.onwrite = () => {
+									cb(true)
+								}
+								writer.onerror = () => {
+									cb(false)
+								}
 								writer.write(prev + text)
-							}, () => { cb(false) })
+							}, () => {
+								cb(false)
+							})
 						}
-						reader.onloadend = (e) => { doWrite((e.target && e.target.result) || '') }
-						reader.onerror = () => { doWrite('') }
+						reader.onloadend = (e) => {
+							doWrite((e.target && e.target.result) || '')
+						}
+						reader.onerror = () => {
+							doWrite('')
+						}
 						reader.readAsText(file, 'utf8')
-					}, () => { cb(false) })
+					}, () => {
+						cb(false)
+					})
 				})
 				// #endif
 				// #ifdef H5
@@ -208,7 +254,10 @@
 				// #ifdef APP-PLUS
 				// @ts-ignore
 				const abs = plus.io.convertLocalFileSystemURL(logPath)
-				uni.openDocument({ filePath: abs, showMenu: true })
+				uni.openDocument({
+					filePath: abs,
+					showMenu: true
+				})
 				// #endif
 			},
 
@@ -235,11 +284,11 @@
 				})
 			},
 
-			bindDateChange: function (e) {
+			bindDateChange: function(e) {
 				console.log('picker发送选择改变，携带值为', e.detail.value)
 				this.date = e.detail.value
 			},
-			bindTimeChange: function (e) {
+			bindTimeChange: function(e) {
 				console.log('picker发送选择改变，携带值为', e.detail.value)
 				this.time = e.detail.value
 			},
@@ -382,7 +431,8 @@
 							const time = `数据时间：${self.formatTime(item.timeStamp)}`;
 							const eachGroupText = `第${i + 1}组`
 							const count = `第${j + 1}条`;
-							const text = `${eachGroupText} ${count} ${time}\n${ppgText}\n${xText}\n${yText}\n${zText}\n`
+							const text =
+								`${eachGroupText} ${count} ${time}\n${ppgText}\n${xText}\n${yText}\n${zText}\n`
 							await self.writeLog(text)
 						}
 					}
@@ -413,12 +463,12 @@
 			// 监听订阅 notifyMonitorValueChange
 			notifyMonitorValueChange() {
 				let self = this;
-				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function (e) {
+				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log("监听蓝牙回调=>", e);
 					if (!e) {
 						return
 					}
-					if (e.type == 54) {
+					if (e.type == 55 && e.name == 'PPG测量模式开关状态') {
 						self.modeType = e.content.state
 						return;
 					}
@@ -458,5 +508,4 @@
 	.btn {
 		margin-top: 30rpx;
 	}
-
 </style>

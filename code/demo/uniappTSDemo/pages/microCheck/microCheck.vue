@@ -155,7 +155,7 @@
 
 				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log("[微体检] 蓝牙回调触发，原始数据:", JSON.stringify(e));
-					console.log("[微体检] e.type:", e ?.type, "e.dataType:", e ?.dataType);
+					console.log("[微体检] e.type:", e?.type, "e.dataType:", e?.dataType);
 
 					// 检查数据是否有效
 					if (!e || e.type === undefined) {
@@ -175,7 +175,7 @@
 					if (!e || e.type === undefined) {
 						return;
 					}
-					if (e.type == 54) {
+					if (e.type == 36) {
 						console.log("[微体检] 蓝牙回调触发，ppg原始数据:", JSON.stringify(e))
 					}
 				})
@@ -208,27 +208,27 @@
 						break;
 
 					case 1:
-						// 测量成功报告数据
-						{
-							const content = e.content || {};
-							self.isMeasuring = false;
-							self.hasResult = true;
-							self.progress = 100;
-							self.microCheckData = {
-								heartRate: content.heartRate || 0,
-								bloodOxygen: content.bloodOxygen || 0,
-								pressure: content.pressure || 0,
-								emotion: content.emotion || 0,
-								fatigueLevel: content.fatigueLevel || 0,
-								bloodSugar: content.bloodSugar || 0,
-								bodyTemperature: content.bodyTemperature || 0,
-								highPressure: content.highPressure || 0,
-								lowPressure: content.lowPressure || 0,
-								hrv: content.hrv || 0
-							};
-							console.log("微体检测量完成:", content);
-						}
-						break;
+					// 测量成功报告数据
+					{
+						const content = e.content || {};
+						self.isMeasuring = false;
+						self.hasResult = true;
+						self.progress = 100;
+						self.microCheckData = {
+							heartRate: content.heartRate || 0,
+							bloodOxygen: content.bloodOxygen || 0,
+							pressure: content.pressure || 0,
+							emotion: content.emotion || 0,
+							fatigueLevel: content.fatigueLevel || 0,
+							bloodSugar: content.bloodSugar || 0,
+							bodyTemperature: content.bodyTemperature || 0,
+							highPressure: content.highPressure || 0,
+							lowPressure: content.lowPressure || 0,
+							hrv: content.hrv || 0
+						};
+						console.log("微体检测量完成:", content);
+					}
+					break;
 
 					case 2:
 						// 测量失败无结果数据
@@ -298,7 +298,7 @@
 				// 【排查日志】打印设备信息
 				const bleInfo = uni.getStorageSync('bleInfo');
 				console.log("[微体检] 当前蓝牙设备信息:", JSON.stringify(bleInfo));
-				console.log("[微体检] 设备芯片类型 deviceChip:", bleInfo ?.deviceChip);
+				console.log("[微体检] 设备芯片类型 deviceChip:", bleInfo?.deviceChip);
 
 				// 重置数据
 				self.isMeasuring = true;
