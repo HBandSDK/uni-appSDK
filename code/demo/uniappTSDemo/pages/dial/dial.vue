@@ -52,6 +52,7 @@
 			</view>
 		</view>
 	</view>
+
 </template>
 
 <script lang="ts">
@@ -228,9 +229,9 @@
 			clickDialBackground(e : WechatMiniprogram.BaseEvent) {
 				console.log("表盘操作", e);
 				const index = e.currentTarget.dataset.index;
-				const file : OPDirectoryBrowse.File = this.data.customBackgroundList[index]
+				const file : OPDirectoryBrowse.File = this.customBackgroundList[index]
 				//@ts-ignore
-				const isUsing = file.name == this.data.useDial;
+				const isUsing = file.name == this.useDial;
 				console.log("isUsing===>", isUsing)
 				console.log("file=====>", file)
 
@@ -269,16 +270,17 @@
 			 * 表盘操作--设置自定义背景(仅限当前使用表盘)
 			 */
 			_dialOperateSetDialCustomBackground(file : OPDirectoryBrowse.File) {
-				if (this.data.customBackgroundList.length == 0) {
+				if (this.customBackgroundList.length == 0) {
 					return uni.showToast({
 						title: "表盘背景列表为空，请先添加表盘背景"
 					})
 				}
 				RCSPOpWatchDial?.getDialCustomBackground(file).then((dialBackground) => {
+					console.log('点击了当前表盘操作中的自定义表盘背景')
 					const menu = new Array<string>()
 					menu.push("恢复默认背景")
-					for (let index = 0; index < this.data.customBackgroundList.length; index++) {
-						const element = this.data.customBackgroundList[index];
+					for (let index = 0; index < this.customBackgroundList.length; index++) {
+						const element = this.customBackgroundList[index];
 						menu.push(element.getName())
 					}
 					const config = {
@@ -289,17 +291,19 @@
 							if (res.tapIndex == 0) {
 								backgroundFile = undefined
 							} else {
-								backgroundFile = this.data.customBackgroundList[res.tapIndex - 1]
+								backgroundFile = this.customBackgroundList[res.tapIndex - 1]
 							}
 							if (!backgroundFile || backgroundFile.getName() != dialBackground?.getName()) {
 								RCSPOpWatchDial?.setDialCustomBackground(backgroundFile).then((_res) => {
 									if (backgroundFile) {
+										console.log('设置自定义背景成功')
 										uni.showToast({
 											title: "设置自定义背景成功"
 										})
 									} else {
+										console.log('设置自定义背景失败')
 										uni.showToast({
-											title: "恢复默认背景成功"
+											title: "恢复默认背景失败"
 										})
 									}
 								}).catch((error) => {
@@ -343,7 +347,7 @@
 			 * 表盘操作--获取表盘版本信息
 			 */
 			_dialOperateGetDialVersionInfo(file : OPDirectoryBrowse.File) {
-				veepooJLGetDialVersionInfoManager(file, function (result : any) {
+				veepooJLGetDialVersionInfoManager(file, function (result) {
 					console.log("获取表盘版本信息result=>", result)
 				})
 			},
@@ -351,10 +355,11 @@
 			 * 表盘操作--获取表盘背景
 			 */
 			_dialOperateGetDialBackground(file : OPDirectoryBrowse.File) {
-				veepooJLGetDialBackgroundManager(file, function (result : any) {
+				veepooJLGetDialBackgroundManager(file, function (result) {
 					console.log("获取表盘背景result=>", result)
 				})
 			},
+
 			/**
 			 * 表盘操作--设置自定义背景(仅限当前使用表盘)
 			 */
@@ -416,6 +421,12 @@
 </script>
 
 <style>
+	.page {
+		width: 100%;
+		height: 100%;
+		background-color: #F8FAFCFF;
+	}
+
 	.item-containt {
 		height: max-content;
 		background: #FFFFFF;

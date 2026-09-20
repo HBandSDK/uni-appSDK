@@ -1,30 +1,75 @@
 <template>
 	<view class="box">
-		<view>
-			<view>手环状态：{{device.content.wristbandStatus}}</view>
-			<view>呼吸率HR1每秒：{{device.content.HR1PerSecond}}</view>
-			<view>呼吸率HR2每分钟：{{device.content.HR2PerHour}}</view>
-			<view>每秒Hrv: {{device.content.Hrv}}</view>
-			<view>RR1每秒：{{device.content.RR1PerSecond}}</view>
-			<view>RR2每6秒：{{device.content.RR2Per6Second}}</view>
-			<view>BR2每分钟：{{device.content.BR2PerHours}}</view>
-			<view>BR1每秒：{{device.content.BR2PerSecond}}</view>
-			<view>导联佩戴：{{device.content.wearStatus}}</view>
-			<view>M_ID：{{device.content.M_ID}}</view>
-			<view>QTC：{{device.content.QTC}}</view>
-			<view>PWV：{{device.content.PWV}}</view>
+		<!-- 标题 -->
+		<view class="header">
+			<text class="header-title">ECG 心电测量</text>
 		</view>
-		<view>
 
+		<!-- 数据卡片 -->
+		<view class="card">
+			<view class="card-title">实时数据</view>
+			<view class="data-grid">
+				<view class="data-item">
+					<text class="data-label">手环状态</text>
+					<text class="data-value">{{device.content.wristbandStatus !== undefined ? device.content.wristbandStatus : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">导联佩戴</text>
+					<text class="data-value">{{device.content.wearStatus !== undefined ? device.content.wearStatus : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">HR1每秒</text>
+					<text class="data-value">{{device.content.HR1PerSecond !== undefined ? device.content.HR1PerSecond : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">HR2每分钟</text>
+					<text class="data-value">{{device.content.HR2PerHour !== undefined ? device.content.HR2PerHour : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">Hrv每秒</text>
+					<text class="data-value">{{device.content.Hrv !== undefined ? device.content.Hrv : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">RR1每秒</text>
+					<text class="data-value">{{device.content.RR1PerSecond !== undefined ? device.content.RR1PerSecond : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">RR2每6秒</text>
+					<text class="data-value">{{device.content.RR2Per6Second !== undefined ? device.content.RR2Per6Second : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">BR1每秒</text>
+					<text class="data-value">{{device.content.BR2PerSecond !== undefined ? device.content.BR2PerSecond : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">BR2每分钟</text>
+					<text class="data-value">{{device.content.BR2PerHours !== undefined ? device.content.BR2PerHours : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">M_ID</text>
+					<text class="data-value">{{device.content.M_ID !== undefined ? device.content.M_ID : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">QTC</text>
+					<text class="data-value">{{device.content.QTC !== undefined ? device.content.QTC : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">PWV</text>
+					<text class="data-value">{{device.content.PWV !== undefined ? device.content.PWV : '--'}}</text>
+				</view>
+			</view>
 		</view>
+
+		<!-- 进度 -->
 		<view class="ecg-item">测试进度：{{device && device.progress}}%</view>
 
+		<!-- 按钮 -->
+		<view class="btn-group">
+			<button class="btn" @click="ECGmeasureStartDataManager">开启测试</button>
+			<button class="btn btn-stop" @click="ECGmeasureStopDataManager">关闭测试</button>
+		</view>
 
-
-		<button class="btn" @click="ECGmeasureStartDataManager">开启测试</button>
-		<button class="btn" @click="ECGmeasureStopDataManager">关闭测试</button>
-
-
+		<!-- 波形图 -->
 		<scroll-view class="myScoll" scroll-x>
 			<view>
 				<view class="box1">
@@ -32,12 +77,9 @@
 				</view>
 				<view class="box2">
 					<canvas canvas-id="myCanvas" id="myCanvas" style="width: 5000px; height: 300px;"></canvas>
-
 				</view>
 			</view>
 		</scroll-view>
-
-
 	</view>
 </template>
 
@@ -93,7 +135,7 @@
 		methods: {
 			// 无参数
 			ECGmeasureStartDataManager() {
-				this.notifyMonitorValueChange();
+				// this.notifyMonitorValueChange();
 				veepooFeature.veepooSendECGmeasureStartDataManager();
 			},
 			ECGmeasureStopDataManager() {
@@ -157,11 +199,81 @@
 
 <style>
 	.box {
-		/* padding: 50rpx; */
+		padding: 30rpx;
+	}
+
+	.header {
+		text-align: center;
+		padding: 20rpx 0 30rpx;
+	}
+
+	.header-title {
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #333;
+	}
+
+	.card {
+		background: #fff;
+		border-radius: 16rpx;
+		padding: 24rpx;
+		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+	}
+
+	.card-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 20rpx;
+	}
+
+	.data-grid {
+		display: flex;
+		flex-wrap: wrap;
+	}
+
+	.data-item {
+		width: 33.33%;
+		padding: 12rpx 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.data-label {
+		font-size: 24rpx;
+		color: #999;
+		margin-bottom: 6rpx;
+	}
+
+	.data-value {
+		font-size: 28rpx;
+		color: #333;
+		font-weight: 500;
+	}
+
+	.ecg-item {
+		line-height: 80rpx;
+		font-size: 28rpx;
+		color: #666;
+		text-align: center;
+	}
+
+	.btn-group {
+		display: flex;
+		gap: 20rpx;
+		margin: 30rpx 0;
 	}
 
 	.btn {
-		margin: 20rpx 0;
+		flex: 1;
+		background-color: #00b0fb;
+		color: #fff;
+		border-radius: 12rpx;
+		font-size: 30rpx;
+	}
+
+	.btn-stop {
+		background-color: #ff6b6b;
 	}
 
 	.box1 {

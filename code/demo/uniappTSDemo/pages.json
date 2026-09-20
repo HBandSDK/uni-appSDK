@@ -39,6 +39,22 @@
 			}
 		},
 		{
+			"path": "pages/dial/addBg/addBg",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/dial/addDial/addDial",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		}, {
+			"path": "pages/dial/addBg/dial_bg_image/dial_bg_image",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		}, {
 			"path": "pages/sleep/sleep",
 			"style": {
 				"navigationBarTitleText": ""
@@ -300,6 +316,30 @@
 			"path": "pages/YM28PROSendCommand/YM28PROSendCommand",
 			"style": {
 				"navigationBarTitleText": "YM28PRO"
+			}
+		},
+		{
+			"path": "pages/BTfun/BTfun",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/sportControl/sportControl",
+			"style": {
+				"navigationBarTitleText": "运动控制"
+			}
+		},
+		{
+			"path": "pages/skinElectrical/skinElectrical",
+			"style": {
+				"navigationBarTitleText": "皮肤电活动测量"
+			}
+		},
+		{
+			"path": "pages/worldClock/worldClock",
+			"style": {
+				"navigationBarTitleText": "世界时钟"
 			}
 		}
 	],

@@ -673,6 +673,81 @@ console.log("e=>",e)
 
 ------
 
+### 7.12 安卓配对接口
+
+> 适用范围：Android 平台 App端 和 微信小程序端
+
+**前提**
+
+蓝牙设备已完成BLE连接
+
+**接口**
+
+```js
+veepooAndroidPairWithPasswordVerifyManager
+```
+
+**使用示例**
+
+```js
+import {veepooFeature} from '../../miniprogram_dist/index'
+veepooFeature.veepooAndroidPairWithPasswordVerifyManager({
+  deviceId: 'AA:BB:CC:DD:EE:FF', // 关键传入deviceId
+}, function (res) {  
+  if (res.pairSuccess) {
+    // 配对成功
+    console.log('配对成功', res.pairResult)
+  } else {
+    // 配对失败/取消配对
+    console.log('配对失败', res.err)
+  }
+})
+```
+
+**补充说明**
+如果取消配对，由于安卓系统的机制，取消配对可能会造成BLE断开连接，需要用户自行监听连接状态，并进行重连操作；
+app端出现的频率较高，小程序出现的频率较低；
+
+**回调**
+
+**res：**回调数据
+
+成功响应
+
+```js
+{
+  pairSuccess: true,           // 配对是否成功
+  pairResult: {                // 配对详情
+    code: 0,                   // 0=成功
+    msg: '配对成功',
+    device: 'AA:BB:CC:DD:EE:FF',
+    // App端额外字段：
+    confirmed: true,           // bondState二次确认
+    bondState: 'BONDED'
+  },
+  err: null                    // 错误描述
+}
+```
+
+失败响应
+
+```js
+{
+  pairSuccess: false,
+  pairResult: null,
+  err: 'BT配对失败'             // 或 'BT配对异常: xxx'
+}
+```
+
+异常响应
+
+```js
+{ msg: '非安卓平台，不支持配对' }      // 非Android
+{ msg: '不支持的平台: xxx' }          // 不支持的平台
+```
+
+------
+
 
 
 ## 8. 日志控制模块 veepooLogger
@@ -1113,9 +1188,10 @@ veepooFeature.veepooSendReadDailyDataManager(data);
 Progress:100,// 读取进度 1-100%
 name:"读取日常数据",
 type:5,// type 等于5表示日常数据回调
-content:{
-  // 当前包的位数
-  let currentPackageNum = 106,
+content:[
+    {
+  // 当前时间对应的包数
+  let currentPackageNum = 126,// 对应的时间 12:30 
   // 日期相关
    let date = ''
   //  计步相关 stepCount 步 数  amountOfExercise  运动量 distance 距离 calorie,卡路里 wear 佩戴
@@ -1165,9 +1241,28 @@ content:{
   //  体温相关
   let bodyTemperature = '' // 如果值为空，需要在特定的读取自动体温数据接口读取
 
+},{
+    ...
+},{
+    ...
 }
+    ]
 }
 ```
+
+**读取异常问题**
+
+**现象描述：**
+设备执行**恢复出厂设置**或**关机重启**后，其历史数据存储机制发生以下变化：
+
+1. **数据清空范围**：所有历史时间段（含当天00:00至重启前）的累积包数记录被完全清除。
+2. **重启后行为**：设备从**开机时刻**所在的时间段（如10:00–10:30）重新开始计数，直至当日24:00。
+3. **接口返回异常**：若在重启后查询**24小时内任意历史时间段**的包数，例如：
+   - 假设10:00对应包数为120，设备于10:00重启；
+   - 在12:30（即重启后2.5小时）查询126包对应的时间段数据；
+   - 此时`content`字段返回**空数组**，因为该时间段的数据在重启时已被清空，且设备尚未重新累积到该时间点的历史记录。
+4. **处理建议**：
+   当客户端收到 `content` 为空数组时，**应将当前累计包数的基准重置为 0**，并重新从开机时刻开始获取后续数据。此时，每个时间段对象中的 `currentPackageNum` 字段表示**从本次开机到该时间段结束时的累计包数**，`date` 字段标识该时间段的起始时间。建议客户端以这两个字段作为当前数据的参考依据，而不再依赖重启前已失效的历史记录。
 
 ------
 
@@ -5281,26 +5376,114 @@ veepooFeature.veepooSendMicroCheckDataManager({
 **回调**
 
 ```js
-// 微体检返回
+
+// 测量进行中（进度包）
 {
     type: 53,
-    name: "微体检",
-    control: 1, // 1 开启 2 关闭
-    dataType: 1,// 数据类型  0 进度包 1 测量成功报告数据  2 测量失败无结果数据 3 设备正忙 4 设备低电
-    progress: 100,// 进度
+    name: "微体检测量",
+    dataType: 0,
+    runState: "Measuring",       // 测量状态
+    progress: 50                 // 测量进度 0~100
+}
+
+// 测量成功报告（dataType=1）
+{
+    type: 53,
+    name: "微体检测量",
+    dataType: 1,
+    runState: "ReportSuccess",
+    progress: 100,
     content: {
-      heartRate: 0,// 心率
-      bloodOxygen:0,// 血氧
-      pressure: 0,//  压力
-      emotion: 0,// 情绪 值域[-10,10]
-      fatigueLevel: 0,// 疲劳度
-      bloodSugar: 0,// 血糖
-      bodyTemperature: 0,// 体温
-      highPressure: 0,// 高压
-      lowPressure: 0,// 低压
-      hrv:0,// hrv
+        heartRate: 79,           // 心率
+        bloodOxygen: 98,         // 血氧 %
+        pressure: 11,            // 压力 0~100
+        emotion: 0,              // 情绪 [-10,10]
+        fatigueLevel: 0,         // 疲劳度 0~10
+        bloodSugar: 5.31,        // 血糖
+        bodyTemperature: 36.5,   // 体温
+        highPressure: 119,       // 收缩压
+        lowPressure: 86          // 舒张压
     }
- }
+}
+
+// 测量成功报告（dataType=5，扩展数据，设备按支持的功能返回对应字段）
+{
+    type: 53,
+    name: "微体检测量",
+    dataType: 5,
+    runState: "ReportSuccess",
+    current: 1,                  // 当前包序号
+    total: 1,                   // 总包数
+    content: {
+        basicInfo: {            // 基本信息
+            gender: "male",    // male / female
+            age: 30,
+            height: 175,       // cm
+            weight: 70         // kg
+        },
+        heartRate: 79,         // 平均心率 30~220
+        bloodOxygen: 98,        // 血氧 70~99 %
+        opticalBloodPressure: {// 光电血压 0~300
+            highPressure: 120,
+            lowPressure: 80
+        },
+        pumpBloodPressure: {   // 气泵血压 0~300
+            highPressure: 120,
+            lowPressure: 80
+        },
+        bloodSugar: {          // 血糖
+            displayType: "value", // value 显示值 / level 显示等级
+            value: 531
+        },
+        bodyTemperature: {    // 体温
+            rawTemperature: 36.5,// 原始温度
+            bodyTemperature: 36.5 // 体温
+        },
+        pressure: 11,          // 压力 0~100
+        emotion: 0,            // 情绪 [-10,10]
+        fatigueLevel: 0,       // 疲劳度 0~10
+        hrv: 101,              // HRV 1~210
+        skinElectrical: {      // 皮电
+            emotion: 0,        // 情绪 [-10,10]
+            skinMoisture: 50,  // 皮肤含水量 [1,99]
+            depressionRisk: 0, // 抑郁症风险 0:低 1:中 2:高
+            snsActivation: 50, // 交感神经活跃度 [1,99]
+            cortisol: 150      // 皮质醇浓度 [0,500] ug/L
+        },
+        bloodComponent: {      // 血液成分
+            uricAcid: 36.5,    // 尿酸 μmol/L
+            cholesterol: 4.5,  // 总胆固醇 mmol/L
+            triglyceride: 1.2, // 甘油三酯 mmol/L
+            highDensityLipoprotein: 1.5, // 高密度脂蛋白 mmol/L
+            lowDensityLipoprotein: 2.3   // 低密度脂蛋白 mmol/L
+        },
+        bodyComposition: {     // 身体成分
+            bmi: 22.9,         // BMI
+            bodyFatRate: 15.0, // 体脂率
+            fatMass: 12.0,     // 脂肪量
+            leanBodyMass: 58.0,// 去脂体重
+            muscleRate: 40.0,  // 肌肉率
+            muscleMass: 30.0,  // 肌肉量
+            subcutaneousFat: 10.0, // 皮下脂肪
+            bodyWater: 50.0,   // 体内水分
+            waterContent: 50.0,// 含水量
+            skeletalMuscleRate: 30.0, // 骨骼肌率
+            boneMass: 3.5,     // 骨量
+            proteinRate: 16.0, // 蛋白质占比
+            proteinMass: 10.0, // 蛋白质量
+            basalMetabolicRate: 1500 // 基础代谢率
+        }
+    }
+}
+
+// 其它状态（测量失败 / 设备正忙 / 设备低电 / 佩戴未通过 / ECG导联脱落）
+{
+    type: 53,
+    name: "微体检测量",
+    dataType: 2,
+    runState: "MeasurementFailed",
+    progress: 100
+}
  
  
  // 每秒心率
@@ -5317,10 +5500,91 @@ veepooFeature.veepooSendMicroCheckDataManager({
  // ppg数据
  {
  	"name": "ppg数据", 
- 	"type": 36,
+ 	"type": 54,
     "content": [48703, 48610, 48542, 48426, 48116, 48125, 48139, 48047, 48012, 48185, 48718, 49417, 49726, 50051, 50409, 50424, 50425, 50538, 50463, 50285, 50208, 50166, 50100, 49981, 50005]
  }
 ```
+
+##### 字段说明
+
+**runState 测量状态**
+
+| runState          | 说明                     | 是否携带 content |
+| ----------------- | ------------------------ | ---------------- |
+| Measuring         | 测量进行中               | 否               |
+| ReportSuccess     | 测量成功，返回报告数据   | 是               |
+| MeasurementFailed | 测量失败，无结果         | 否               |
+| DeviceBusy        | 设备正忙，正在测其它数据 | 否               |
+| LowBattery        | 设备低电                 | 否               |
+| WearingNotPassed  | 佩戴未通过               | 否               |
+| ECGLeadOff        | ECG 导联脱落             | 否               |
+
+**dataType=1 content 字段**
+
+| 字段            | 说明          |
+| --------------- | ------------- |
+| heartRate       | 心率          |
+| bloodOxygen     | 血氧 %        |
+| pressure        | 压力 0~100    |
+| emotion         | 情绪 [-10,10] |
+| fatigueLevel    | 疲劳度 0~10   |
+| bloodSugar      | 血糖          |
+| bodyTemperature | 体温          |
+| highPressure    | 收缩压        |
+| lowPressure     | 舒张压        |
+
+**dataType=5 content 字段（设备按支持的功能返回对应字段，未开启的功能不返回）**
+
+| 字段                 | 说明                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| basicInfo            | 基本信息：gender(male 男/female 女) / age / height(**cm**) / weight(**kg**) |
+| heartRate            | 平均心率 **30~220**                                          |
+| bloodOxygen          | 血氧 **70~99 %**                                             |
+| opticalBloodPressure | 光电血压：highPressure / lowPressure，**0~300**              |
+| pumpBloodPressure    | 气泵血压：highPressure / lowPressure，**0~300**              |
+| bloodSugar           | 血糖：displayType(value 血糖值/level 血糖等级) + value       |
+| bodyTemperature      | 体温：rawTemperature 原始温度 + bodyTemperature  体温        |
+| pressure             | 压力 **0~100**                                               |
+| emotion              | 情绪 **[-10,10]**                                            |
+| fatigueLevel         | 疲劳度 **0~10**                                              |
+| hrv                  | HRV **1~210**                                                |
+| skinElectrical       | 皮电：见下表                                                 |
+| bloodComponent       | 血液成分：见下表                                             |
+| bodyComposition      | 身体成分：见下表                                             |
+
+**skinElectrical 皮电字段**
+
+通用单位ug/dL或nmol/L，10ug/L = 1ug/dL，1nmol/L = 0.36247ug/L， 1nmol/L = 0.036247 ug/dL
+
+| 字段           | 有效范围                                  | 说明           |
+| -------------- | ----------------------------------------- | -------------- |
+| emotion        | [-10,10]                                  | 情绪           |
+| skinMoisture   | [1,99]                                    | 皮肤含水量     |
+| depressionRisk | [0,2], 0:低风险，1:中风险，2:高风险       | 抑郁症风险     |
+| snsActivation  | [1,99]                                    | 交感神经活跃度 |
+| cortisol       | 有效范围[0，500]ug/L,正常范围[0，230]ug/L | 皮质醇浓度     |
+
+**bloodComponent 血液成分子字段**
+
+| 字段                   | 说明                     |
+| ---------------------- | ------------------------ |
+| uricAcid               | 尿酸 ，单位μmol/L        |
+| cholesterol            | 总胆固醇，单位mmol/L     |
+| triglyceride           | 甘油三酸酯，单位mmol/L   |
+| highDensityLipoprotein | 高密度脂蛋白，单位mmol/L |
+| lowDensityLipoprotein  | 低密度脂蛋白，单位mmol/L |
+
+**bodyComposition 身体成分子字段**
+
+| 字段         | 有效范围        | 说明     | 字段               | 有效范围       | 说明       |
+| ------------ | --------------- | -------- | ------------------ | -------------- | ---------- |
+| bmi          | 【4.0，1114.0】 | BMI      | subcutaneousFat    | 【1.0，47.0】  | 皮下脂肪   |
+| bodyFatRate  | 【2.0，48.0】   | 体脂率   | bodyWater          | 【28.0，79.0】 | 体内水分   |
+| fatMass      | 【10.0，248.0】 | 脂肪量   | waterContent       | 【7.0，217.0】 | 含水量     |
+| leanBodyMass | 【1.0，132.0】  | 去脂体重 | skeletalMuscleRate | 【13.0，69.0】 | 骨骼肌率   |
+| muscleRate   | 【39.0，90.0】  | 肌肉率   | boneMass           | 【2.3，4.8】   | 骨量       |
+| muscleMass   | 【9.0，248.0】  | 肌肉量   | proteinRate        | 【4.0，26.0】  | 蛋白质占比 |
+| proteinMass  | 【1.0，71.0】   | 蛋白质量 | basalMetabolicRate | 【25，14995】  | 基础代谢率 |
 
 ### 9.33 B3 自动测量(type=54)
 
@@ -5688,6 +5952,464 @@ let score = veepooFeature.VeepooGetHrvHeartHealthScore(HrvData);
 }
 ```
 
+------
+
+### 9.36 运动控制(type=60)
+
+#### 9.36.1 设置运动控制（开启/暂停/继续/停止）
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**DAMotionContrlType**字段的数据为1
+
+**接口**
+
+```
+veepooSendSportControlDataManager
+```
+
+**参数**
+
+| 字段      | 类型   | 必填 | 说明                                     |
+| --------- | ------ | ---- | ---------------------------------------- |
+| switch    | string | 是   | setup 表示设置 read 表示读取             |
+| sportMode | number | 是   | 0 =app运动，其他值=设备运动模式编号      |
+| opCode    | number | 是   | 操作码： 1 =开启 2 =暂停 3 =继续 4 =停止 |
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data ={
+  switch: 'setup',
+  sportMode: 0,    // 运动模式：0=app运动，其他=设备运动模式
+  opCode: 1        // 操作码：1=开启 2=暂停 3=继续 4=停止
+}
+veepooFeature.veepooSendSportControlDataManager(data)
+```
+
+**回调**
+
+```json
+{
+  "name": "运动控制",
+  "model": "setup",
+  "state": "success",
+  "type": 60
+}
+```
+
+#### 9.36.2 读取运动信息
+
+**前提**
+
+1.设备支持世界时钟功能，且在功能汇总第四包中的**DAMotionContrlType**字段的数据为1;
+2.当小程序设置到运动控制成功后再调用此处的接口，且每**3秒**调用一次；
+
+**参数**
+
+| 字段      | 类型   | 必填 | 说明                                |
+| --------- | ------ | ---- | ----------------------------------- |
+| switch    | string | 是   | setup 表示设置 read 表示读取        |
+| sportMode | number | 是   | 0 =app运动，其他值=设备运动模式编号 |
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data={
+  switch: 'read',
+  sportMode: 0
+}
+veepooFeature.veepooSendSportControlDataManager(data)
+```
+
+**回调**
+
+```js
+{
+  "name": "运动控制",
+  "model": "read",
+  "state": "success",
+  "Progress": 100,
+  "type": 60,
+  "content": {
+    "sportModel": 1,
+    "opCode": 2,
+    "runState": "NotStarted",
+    "deviceState": "Charging",
+    "exerciseTimeStamp": 1,
+    "exerciseDistance": 0,
+    "heartRate": 0,
+    "calories": 0,
+    "pace": 0,
+    "speed": 0
+  }
+}
+```
+
+> 1.设备主动上报时 Content 只包含 sportModel 、 opCode 、 heartRate；
+> 2.关于具体数据的单位换算，可以参考给出的demo;
+
+**content 字段说明**
+
+| 字段              | 类型   | 说明                                                   |
+| ----------------- | ------ | ------------------------------------------------------ |
+| sportModel        | number | 运动模式： 0 =app运动，其他=设备运动模式               |
+| opCode            | number | 操作码                                                 |
+| runState          | string | 运动状态（见下表）                                     |
+| deviceState       | string | 设备状态（见下表）                                     |
+| exerciseTimeStamp | number | 运动时间戳（秒）                                       |
+| exerciseDistance  | number | 运动距离（米）                                         |
+| heartRate         | number | 心率（次/分、bpm）                                     |
+| calories          | number | 卡路里（卡）                                           |
+| pace              | number | 配速（秒）具体单位转换可以参考demo                     |
+| speed             | number | 速度（米/小时）具体单位转换可以参考demo                |
+| gnssInfo          | object | GNSS信息： { isGnssType: boolean, gnssSignal: string } |
+
+**runState 枚举：**
+
+| 字符串     | 说明       |
+| ---------- | ---------- |
+| NotStarted | 未开始运动 |
+| Exercising | 运动中     |
+| Paused     | 暂停中     |
+
+**deviceState 枚举：**
+
+| 字符串             | 说明                           |
+| ------------------ | ------------------------------ |
+| Normal             | 设备正常                       |
+| LowBattery         | 设备低电                       |
+| Charging           | 设备充电中                     |
+| MaxDurationReached | 设备单次运动时长已达到最大限制 |
+| BatteryCritical    | 电量小于等于10%                |
+
+**gnssSignal枚举：**
+
+| 字符串       | 说明   |
+| ------------ | ------ |
+| NoSignal     | 无信号 |
+| SignalWeak   | 弱     |
+| SignalNormal | 一般   |
+| SignalGood   | 良好   |
+| SignalStrong | 强     |
+
+------
+
+### 9.37 世界时钟(type=61)
+
+#### 9.37.1 添加世界时钟
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSendAddWorldClockDataManager
+```
+
+**参数**
+
+| 字段     | 类型   | 说明                         |
+| -------- | ------ | ---------------------------- |
+| id       | number | 时钟id编号                   |
+| timeZone | number | 相较 UTC（GMT） 的偏移分钟数 |
+| city     | string | 城市名称                     |
+
+**时区参数说明：**
+
+SDK 中 timezone 字段表示 相较格林尼治时间（UTC，本初子午线）的偏移分钟数 ，规则如下：
+
+| 城市   | 时区            | 偏移量（分钟） | 传入值 |
+| ------ | --------------- | -------------- | ------ |
+| 北京   | 东八区（+8:00） | 8 × 60 = 480   | 480    |
+| 东京   | 东九区（+9:00） | 9 × 60 = 540   | 540    |
+| 伦敦   | UTC±0（+0:00）  | 0              | 0      |
+| 纽约   | 西五区（-5:00） | -5 × 60 = -300 | -300   |
+| 洛杉矶 | 西八区（-8:00） | -8 × 60 = -480 | -480   |
+
+> 偏移量必须是 15 的倍数。正为东、负为西，SDK 内部会自动换算为协议所需的编码格式。
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data = {
+    id: 1, // 世界时钟id
+    timezone: 480, // 时区的值 详情请查看 上述 timezone 时区参数说明 
+    city: '北京'
+};
+veepooFeature.veepooSendAddWorldClockDataManager(data);
+```
+
+**回调**
+
+```js
+{
+    "name": "添加世界时钟", 
+    "type": 61, 
+    "state": "success", // success 成功 failure 失败
+    "CRC": 3849, 
+}
+```
+
+------
+
+#### 9.37.2 读取世界时钟
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSendReadWorldClockDataManager
+```
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data = { 
+    CRC: 0 // 上次读取设备返回的 CRC，传 0 表示强制全量读取 
+};
+veepooFeature.veepooSendReadWorldClockDataManager(data);
+```
+
+**回调**
+
+```js
+ {
+     "name": "读取世界时钟",
+      "type": 61,
+      "state": "success",// success 成功 failure 失败
+      "Progress": 100,
+      "content": [
+          {"id": 1, "timeZone": 32, "city": "北京"}, 
+          {"id": 2, "timeZone": 16, "city": "迪拜"}
+      ]
+ }
+```
+
+------
+
+
+
+#### 9.37.3 调整时钟顺序
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSendAdujstWorldClockDataManager
+```
+
+**参数**
+
+| 字段   | 类型   | 必填 | 说明                     |
+| ------ | ------ | ---- | ------------------------ |
+| fromId | number | 是   | 被移动时钟的当前位置编号 |
+| toId   | number | 是   | 目标位置编号             |
+
+> 此处的ID是指当前时钟所在的位置(content链表上的位置)，链表排序id从1开始。
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data = {
+    fromId: 1,
+    toId: 2
+};
+veepooFeature.veepooSendAdujstWorldClockDataManager(data);
+```
+
+**回调**
+
+```js
+ {
+     "name": "调整时钟顺序",
+     "type": 61, 
+     "state": "success",// success 成功 failure 失败
+     "CRC": 2060,
+ }
+```
+
+------
+
+
+
+#### 9.37.4 删除世界时钟
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSendDeleteWorldClockDataManager
+```
+
+**参数**
+
+| 字段         | 类型   | 必填 | 说明                 |
+| ------------ | ------ | ---- | -------------------- |
+| worldClockId | number | 是   | 要删除的时钟的id编号 |
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+let data = {
+    worldClockId: 1,
+};
+veepooFeature.veepooSendDeleteWorldClockDataManager(data);
+```
+
+**回调**
+
+```js
+{
+    "name": "删除世界时钟",
+    "type": 61,
+    "worldClockId": 1, 
+    "state": "success",// success 成功 failure 失败
+    "CRC": 2060,
+}
+```
+
+------
+
+### 9.38 皮肤电活动(type=62)
+
+#### 9.38.1 开启皮肤电活动
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSkinElectricalActivityStartManager
+```
+
+**参数**
+
+无
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+veepooFeature.veepooSkinElectricalActivityStartManager()
+```
+
+**回调**
+
+测量进行中
+
+```js
+{
+  "name": "皮肤电活动测量",
+  "type": 62,
+  "model": "start",
+  "state": "usable",
+  "Progress": 50
+}
+```
+
+测量完成
+
+```js
+{
+  "name": "皮肤电活动测量",
+  "type": 62,
+  "model": "start",
+  "state": "usable",
+  "Progress": 100,
+  "content": {
+    "emotionLevel": 35,
+    "skinMoisture": 60,
+    "depressionRisk": 20,
+    "snsActivation": 45,
+    "cortisolValue": 180
+  }
+}
+```
+
+state 枚举
+
+| 字符串       | 说明               |
+| ------------ | ------------------ |
+| usable       | 设备可用，测量正常 |
+| deviceIsBusy | 设备忙碌           |
+| lowBattery   | 电量低             |
+| deviceIsBusy | 设备忙碌           |
+| wearNotPass  | 佩戴不通过         |
+| failure      | 失败               |
+
+content 字段说明
+
+| 字段           | 类型   | 说明                                         |
+| -------------- | ------ | -------------------------------------------- |
+| emotionLevel   | number | 情绪水平[-10,10]                             |
+| skinMoisture   | number | 皮肤水分[1,99]                               |
+| depressionRisk | number | 抑郁症风险[0,2],0:低风险，1:中风险，2:高风险 |
+| snsActivation  | number | 交感神经激活值                               |
+| cortisolValue  | number | 皮质醇浓度                                   |
+
+> 皮质醇浓度,有效范围[0，500]μg/L,正常范围[0，230]μg/L，通用单位μg/dL或nmol/L，1 μg/L = 10μg/dL，1nmol/L = 0.36247μg/L， 1nmol/L = 0.036247 μg/dL
+>
+> ------
+
+#### 9.38.2 关闭皮肤电活动
+
+**前提**
+
+设备支持世界时钟功能，且在功能汇总第四包中的**worldClockType**字段的数据为1
+
+**接口**
+
+```js
+veepooSkinElectricalActivityCloseManager
+```
+
+**参数**
+
+无
+
+**使用示例**
+
+```js
+import { veepooBle, veepooFeature } from '../../miniprogram_dist/index';
+veepooFeature.veepooSkinElectricalActivityCloseManager()
+```
+
+**回调**
+
+```js
+{
+  "name": "皮肤电活动测量",
+  "type": 62,
+  "model": "stop",
+  "state": "usable",
+  "Progress": 30
+}
+```
+
+------
+
+### 
+
 ### 10. type 回调对照总表（权威）
 
 全局监听 `veepooUniAppSDKNotifyMonitorValueChange` 中按 `res.type` 路由。下表为完整对照：
@@ -5739,6 +6461,9 @@ let score = veepooFeature.VeepooGetHrvHeartHealthScore(HrvData);
 |  54  | B3 自动测量                    | `veepooSendReadB3AutoTestFeatureDataManager`             |
 |  55  | 手动测量                       | `veepooSendManualMeasurementDataReadManager`             |
 |  58  | 压力测量                       | `veepooSendPressureTestManager`                          |
+|  60  | 运动控制                       | ` veepooSendSportControlDataManager`                     |
+|  61  | 世界时钟                       | ` veepooSendAddWorldClockDataManager` 等                 |
+|  62  | 皮肤电活动                     | ` veepooSkinElectricalActivityStartManager`等            |
 |  90  | 恢复出厂设置                   | `veepooSendResettingTheDeviceDataManager`                |
 | 2000 | PTT 测量开关                   | 设备主动上报                                             |
 

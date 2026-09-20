@@ -1,6 +1,7 @@
 <template>
 	<view class="network-dial">
-		<view class="get-custom-dial" @click="setJLVerify"><button style="margin: 30rpx  auto;background-color: white;">杰理认证</button></view>
+		<view class="get-custom-dial" @click="setJLVerify"><button
+				style="margin: 30rpx  auto;background-color: white;">杰理认证</button></view>
 		<view class="get-custom-dial" style="display: flex;">
 
 			<!-- <view style="height: 30px; padding: 0 10px;background-color: #ffffff;" @click="removeGetIndex">Index - 1</view> -->
@@ -9,7 +10,8 @@
 
 
 		</view>
-		<view class="get-custom-dial" @click="clickStartTransferDialFile"><button style="margin: 30rpx  auto;background-color: white;">开始传输</button></view>
+		<view class="get-custom-dial" @click="clickStartTransferDialFile"><button
+				style="margin: 30rpx  auto;background-color: white;">开始传输</button></view>
 
 		<text>{{transferProgressText}}</text>
 
@@ -94,7 +96,9 @@
 
 					if (connectedDeviceId != undefined) {
 						setTimeout(() => {
-							console.log('==================================认证成功=====================================');
+							console.log(
+								'==================================认证成功====================================='
+							);
 
 						}, 300);
 					}
@@ -141,7 +145,8 @@
 				// dialInfo: { "dataAddress": dialInfo.dataAddress, "writeDataLength": dialInfo.writeDataLength, "binProtocol": dialInfo.binProtocol, "dataUseType": dialInfo.dataUseType, "dialShape": dialInfo.dialShape, "ImageId": dialInfo.ImageId },
 				console.log('这个时获取的dailInfo==>', dialInfo)
 				let data = {
-					version: "11.95.01.00-6702",
+					version: "03.95.05.08-6748",
+					// version: "11.95.01.00-6702",
 					// version: "01.05.02.00-5376",
 					// version: "01.05.02.00-5840",
 					// dialInfo: { "dataAddress": 0, "writeDataLength": 614733, "binProtocol": 2, "dataUseType": 1, "dialShape": 56, "ImageId": 0 },
@@ -149,12 +154,20 @@
 					// dialInfo: { "dataAddress": 0, "writeDataLength": 532597, "binProtocol": 2, "dataUseType": 1, "dialShape": 48, "ImageId": 0 },
 					// version: "01.05.02.00-5840",
 					// dialInfo: { "dataAddress": dialInfo.dataAddress, "writeDataLength": dialInfo.writeDataLength, "binProtocol": dialInfo.binProtocol, "dataUseType": dialInfo.dataUseType, "dialShape": dialInfo.dialShape, "ImageId": dialInfo.ImageId },
+					// dialInfo: {
+					// 	"dataAddress": 0,
+					// 	"writeDataLength": 614733,
+					// 	"binProtocol": 2,
+					// 	"dataUseType": 1,
+					// 	"dialShape": 53,
+					// 	"ImageId": 0
+					// },
 					dialInfo: {
 						"dataAddress": 0,
-						"writeDataLength": 614733,
+						"writeDataLength": 5907609,
 						"binProtocol": 2,
 						"dataUseType": 1,
-						"dialShape": 53,
+						"dialShape": 61,
 						"ImageId": 0
 					},
 					pageIndex: this.getIndex, // 当前页数
@@ -168,7 +181,7 @@
 					self.resultList = result.data.results
 
 					// 获取杰理表盘列表
-					veepooJLGetDialListManager(function (result) {
+					veepooJLGetDialListManager(function(result) {
 						console.log("result=>", result)
 						self.dialList = result.dialList
 						self.customBackgroundList = result.customBackgroundList
@@ -235,10 +248,10 @@
 
 				// 如果为真，删除，否则直接传输
 				if (deteleState) {
-					veepooJLDeleteDialManager(deteleFile, function (result) {
+					veepooJLDeleteDialManager(deteleFile, function(result) {
 						console.log("result删除表盘=>", result)
 						// 删除完成，传输数据
-						veepooJLAddDialTransferStartManager(fileData, function (result) {
+						veepooJLAddDialTransferStartManager(fileData, function(result) {
 							console.log("传输进度result=>", result);
 							self.transferProgressText = result.transferProgressText
 							deteleState = false
@@ -246,7 +259,7 @@
 						})
 					})
 				} else {
-					veepooJLAddDialTransferStartManager(fileData, function (result) {
+					veepooJLAddDialTransferStartManager(fileData, function(result) {
 						console.log("传输进度result=>", result);
 						self.transferProgressText = result.transferProgressText
 					})
@@ -269,7 +282,7 @@
 
 				uni.downloadFile({
 					url: currentItem.fileUrl,
-					success: function (res) {
+					success: function(res) {
 						if (res.statusCode === 200) {
 							var tempFilePath = res.tempFilePath;
 							console.log("res==>", res)
@@ -284,7 +297,7 @@
 								name: names[names.length - 1],
 								time: Time
 							}
-							veepooJLGetFileDataManager(tempFilePaths, function (fileResult) {
+							veepooJLGetFileDataManager(tempFilePaths, function(fileResult) {
 								console.log("获取文件成功==>", fileResult);
 								self.fileData = fileResult
 							})
@@ -313,7 +326,7 @@
 							console.log('文件下载失败，HTTP 状态码：', res.statusCode);
 						}
 					},
-					fail: function (err) {
+					fail: function(err) {
 						console.log('文件下载失败：', err);
 					}
 				})
@@ -342,7 +355,7 @@
 
 			notifyMonitorValueChange() {
 				let self = this;
-				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function (e) {
+				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log("e=>", e);
 					console.log("表盘信息===e==>", e)
 					if (e.type == 46) {

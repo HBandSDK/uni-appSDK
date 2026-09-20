@@ -1,509 +1,586 @@
 <template>
-	<view class="container">
+	<view class="box">
 
-		<view class="title">微体检测量</view>
-
-		<!-- 进度区域 -->
-		<view class="progress-area" v-if="isMeasuring">
-			<view class="progress-text">测量中...</view>
-			<progress class="progress-bar" :percent="progress" show-info stroke-width="8" activeColor="#07c160" />
-			<view class="progress-tip">请保持静止，正在检测多项健康指标...</view>
+		<!-- 标题 -->
+		<view class="header">
+			<text class="header-title">微体检测量</text>
 		</view>
 
-		<!-- 结果区域 -->
-		<view class="result-area" v-if="hasResult">
-			<view class="result-title">检测结果</view>
-
-			<view class="result-grid">
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.heartRate}}</view>
-					<view class="item-label">心率(bpm)</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.bloodOxygen}}</view>
-					<view class="item-label">血氧(%)</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.pressure}}</view>
-					<view class="item-label">压力</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.hrv}}</view>
-					<view class="item-label">HRV(ms)</view>
-				</view>
+		<!-- 进度 -->
+		<view class="progress-wrap">
+			<view class="progress-text">测量进度：{{progress}}%</view>
+			<view class="progress-bar">
+				<view class="progress-bar-fill" :style="{ width: progress + '%' }"></view>
 			</view>
-
-			<view class="result-grid">
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.highPressure}}/{{microCheckData.lowPressure}}</view>
-					<view class="item-label">血压(mmHg)</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.bodyTemperature}}</view>
-					<view class="item-label">体温(℃)</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.bloodSugar}}</view>
-					<view class="item-label">血糖(mmol/L)</view>
-				</view>
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.emotion}}</view>
-					<view class="item-label">情绪指数</view>
-				</view>
-			</view>
-
-			<view class="result-grid">
-				<view class="result-item">
-					<view class="item-value">{{microCheckData.fatigueLevel}}</view>
-					<view class="item-label">疲劳度</view>
-				</view>
-			</view>
+			<view class="progress-sub" v-if="measuringTip && isMeasuring">{{measuringTip}}</view>
+			<view class="progress-sub" v-else-if="liveHeartRate && isMeasuring">实时心率：{{liveHeartRate}} bpm</view>
 		</view>
 
 		<!-- 错误提示 -->
-		<view class="error-area" v-if="errorMsg">
-			<view class="error-text">{{errorMsg}}</view>
+		<view class="error-text" v-if="errorMsg && !isMeasuring">{{errorMsg}}</view>
+
+		<!-- 核心指标 -->
+		<view class="card">
+			<view class="card-title">核心指标</view>
+			<view class="data-grid">
+				<view class="data-item">
+					<text class="data-label">心率(bpm)</text>
+					<text class="data-value">{{report.heartRate !== undefined ? report.heartRate : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">血氧(%)</text>
+					<text class="data-value">{{report.bloodOxygen !== undefined ? report.bloodOxygen : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">压力</text>
+					<text class="data-value">{{report.pressure !== undefined ? report.pressure : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">HRV(ms)</text>
+					<text class="data-value">{{report.hrv !== undefined ? report.hrv : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">血压(mmHg)</text>
+					<text class="data-value">{{report.bloodPressure !== undefined ? report.bloodPressure : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">体温(℃)</text>
+					<text class="data-value">{{report.bodyTemperature !== undefined ? report.bodyTemperature : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">血糖</text>
+					<text class="data-value">{{report.bloodSugar !== undefined ? report.bloodSugar : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">情绪</text>
+					<text class="data-value">{{report.emotion !== undefined ? report.emotion : '--'}}</text>
+				</view>
+				<view class="data-item">
+					<text class="data-label">疲劳度</text>
+					<text class="data-value">{{report.fatigueLevel !== undefined ? report.fatigueLevel : '--'}}</text>
+				</view>
+			</view>
 		</view>
 
-		<!-- 按钮区域 -->
-		<view class="btn-area">
+		<!-- 个人基本信息 -->
+		<view class="card" v-if="report.basicInfoList.length">
+			<view class="card-title">个人基本信息</view>
+			<view class="data-grid">
+				<view class="data-item" v-for="(item, i) in report.basicInfoList" :key="'b' + i">
+					<text class="data-label">{{item.label}}</text>
+					<text class="data-value">{{item.value}}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 皮肤电检测 -->
+		<view class="card" v-if="report.skinList.length">
+			<view class="card-title">皮肤电检测</view>
+			<view class="data-grid">
+				<view class="data-item" v-for="(item, i) in report.skinList" :key="'s' + i">
+					<text class="data-label">{{item.label}}</text>
+					<text class="data-value">{{item.value}}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 血液成分 -->
+		<view class="card" v-if="report.bloodComponentList.length">
+			<view class="card-title">血液成分</view>
+			<view class="data-grid">
+				<view class="data-item" v-for="(item, i) in report.bloodComponentList" :key="'bc' + i">
+					<text class="data-label">{{item.label}}</text>
+					<text class="data-value">{{item.value}}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 身体成分 -->
+		<view class="card" v-if="report.bodyCompositionList.length">
+			<view class="card-title">身体成分</view>
+			<view class="data-grid">
+				<view class="data-item" v-for="(item, i) in report.bodyCompositionList" :key="'bo' + i">
+					<text class="data-label">{{item.label}}</text>
+					<text class="data-value">{{item.value}}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 按钮 -->
+		<view class="btn-group">
 			<button class="btn btn-start" @click="microCheckStart" :disabled="isMeasuring">开始测量</button>
 			<button class="btn btn-stop" @click="microCheckStop" :disabled="!isMeasuring">结束测量</button>
 		</view>
 
-		<!-- 说明区域 -->
-		<view class="info-area">
-			<view class="info-title">微体检说明：</view>
-			<view class="info-item">微体检是一次性检测多项健康指标的功能</view>
-			<view class="info-item">检测项目包括：心率、血氧、压力、HRV、血压、体温、血糖、情绪、疲劳度</view>
-			<view class="info-item">测量时请保持静止，确保设备贴合手腕</view>
-			<view class="info-item">测量结果仅供参考，如有异常请咨询医生</view>
+		<!-- 说明 -->
+		<view class="card">
+			<view class="card-title">说明</view>
+			<view class="info-item">· 微体检一次性检测心率、血氧、压力、HRV、血压、体温、血糖、情绪、疲劳度等指标</view>
+			<view class="info-item">· 测量时请保持静止，确保设备贴合手腕</view>
+			<view class="info-item">· 未返回的字段显示 --，测量结果仅供参考，如有异常请咨询医生</view>
 		</view>
 
 	</view>
 </template>
 
 <script>
-	// 引入方式一:
-	// // 整体引入
-	// import sdk from '../../common/index.js'
-
-	// // // 然后自己解构出来
-	// const {
-	// 	veepooBle,
-	// 	veepooFeature
-	// } = sdk;
-
-	// 引入方式二：
 	import {
 		veepooBle,
 		veepooFeature
 	} from '../../common/index.js'
+
+	// 非成功状态提示文案（2失败 3设备忙 4低电 6佩戴未通过 7导联脱落）
+	const STATE_TIPS = {
+		2: '测量失败，无结果数据',
+		3: '设备正忙，正在测其它数据，请稍后再试',
+		4: '设备电量低，请充电后再试',
+		6: '佩戴未通过，请调整佩戴姿势',
+		7: 'ECG导联脱落，请重新佩戴'
+	}
+
+	// 身体成分字段展示配置（设备返回哪些就展示哪些）
+	const BODY_COMPOSITION_FIELDS = [
+		{ key: 'bmi', label: 'BMI' },
+		{ key: 'bodyFatRate', label: '体脂率(%)' },
+		{ key: 'fatMass', label: '脂肪量(kg)' },
+		{ key: 'leanBodyMass', label: '去脂体重(kg)' },
+		{ key: 'muscleRate', label: '肌肉率(%)' },
+		{ key: 'muscleMass', label: '肌肉量(kg)' },
+		{ key: 'subcutaneousFat', label: '皮下脂肪(%)' },
+		{ key: 'bodyWater', label: '体内水分(%)' },
+		{ key: 'waterContent', label: '含水量(%)' },
+		{ key: 'skeletalMuscleRate', label: '骨骼肌率(%)' },
+		{ key: 'boneMass', label: '骨量(kg)' },
+		{ key: 'proteinRate', label: '蛋白质占比(%)' },
+		{ key: 'proteinMass', label: '蛋白质量(kg)' },
+		{ key: 'basalMetabolicRate', label: '基础代谢率(kcal)' }
+	]
+
+	// 空报告：字段为空时页面显示 --
+	const createEmptyReport = () => ({
+		heartRate: undefined,
+		bloodOxygen: undefined,
+		pressure: undefined,
+		hrv: undefined,
+		bloodPressure: undefined,
+		bodyTemperature: undefined,
+		bloodSugar: undefined,
+		emotion: undefined,
+		fatigueLevel: undefined,
+		basicInfoList: [],
+		skinList: [],
+		bloodComponentList: [],
+		bodyCompositionList: []
+	})
+
+	// dataType=5 报告可能分包上报（current/total），缓存已收到的 content，收齐后合并展示
+	let pendingReportContent = null
+
 	export default {
 		data() {
 			return {
 				isMeasuring: false,
 				progress: 0,
-				// 微体检数据
-				microCheckData: {
-					heartRate: 0, // 心率
-					bloodOxygen: 0, // 血氧
-					pressure: 0, // 压力
-					emotion: 0, // 情绪
-					fatigueLevel: 0, // 疲劳度
-					bloodSugar: 0, // 血糖
-					bodyTemperature: 0, // 体温
-					highPressure: 0, // 高压
-					lowPressure: 0, // 低压
-					hrv: 0 // HRV
-				},
-				hasResult: false, // 是否有测量结果
-				errorMsg: '' // 错误信息
+				liveHeartRate: 0,   // 测量中每秒心率（type 51）
+				hasResult: false,   // 是否已出报告
+				errorMsg: '',       // 失败/忙/低电提示
+				measuringTip: '',   // 测量中状态提示（佩戴未通过/导联脱落）
+				report: createEmptyReport()
 			}
 		},
-		onLoad() {
-
-		},
 		onShow() {
-			// 【排查日志】打印系统信息，区分平台
-			const systemInfo = uni.getSystemInfoSync();
-			console.log("[微体检] ========== 页面显示 ==========");
-			console.log("[微体检] 系统信息:", JSON.stringify({
-				platform: systemInfo.platform,
-				system: systemInfo.system,
-				brand: systemInfo.brand,
-				model: systemInfo.model,
-				SDKVersion: systemInfo.SDKVersion
-			}));
-
-			this.notifyMonitorValueChange();
-		},
-		onHide() {
-			// 页面隐藏时可以停止监听
+			this.notifyMonitorValueChange()
 		},
 		onUnload() {
 			// 页面卸载时停止测量
 			if (this.isMeasuring) {
-				this.microCheckStop();
+				this.microCheckStop()
 			}
 		},
 		methods: {
 			// 监听订阅 notifyMonitorValueChange
 			notifyMonitorValueChange() {
-				let self = this;
-				console.log("[微体检] 开始注册蓝牙监听回调");
+				let self = this
 
 				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
-					console.log("[微体检] 蓝牙回调触发，原始数据:", JSON.stringify(e));
-					console.log("[微体检] e.type:", e?.type, "e.dataType:", e?.dataType);
-
-					// 检查数据是否有效
 					if (!e || e.type === undefined) {
-						console.warn("[微体检] 数据无效: e不存在或type未定义");
-						return;
+						return
 					}
-					// type 53 为微体检测量数据类型
+					// type 53 微体检测量（进度/报告/各种状态）
 					if (e.type == 53) {
-						console.log("[微体检] type=53，进入微体检处理");
-						self.handleMicroCheckCallback(e);
+						console.log('[微体检] 回调:', e)
+						self.handleMicroCheckCallback(e)
 					}
-					// 其他类型数据忽略（由其他页面处理）
+					// type 51 每秒心率，测量中实时显示
+					else if (e.type == 51 && self.isMeasuring && e.content) {
+						self.liveHeartRate = e.content.heartRate || 0
+					}
+					// type 54 ppg 原始数据，本页不绘制波形，忽略
 				})
 
-				// ppg 的通道与常规数据通道不一样
+				// ppg 的通道与常规数据通道不一样（本页不绘制波形，仅保留监听避免误用）
 				veepooBle.veepooUniAppSDKNotifyECGValueChange(function(e) {
+					// type 36 ppg 原始数据，本页忽略
 					if (!e || e.type === undefined) {
-						return;
-					}
-					if (e.type == 36) {
-						console.log("[微体检] 蓝牙回调触发，ppg原始数据:", JSON.stringify(e))
+						return
 					}
 				})
 			},
 
-			// 处理微体检测量回调
+			// 处理微体检测量回调（type 53）
+			// dataType: 0进度 1成功报告(平铺) 2失败 3设备忙 4低电 5成功报告 6佩戴未通过 7导联脱落
 			handleMicroCheckCallback(e) {
-				let self = this;
+				const dataType = e.dataType
 
-				// 检查数据有效性
-				if (!e) {
-					console.warn("[微体检] 收到空数据");
-					return;
+				// 0 进度 / 6 佩戴未通过 / 7 导联脱落：测量仍在进行
+				if (dataType === 0 || dataType === 6 || dataType === 7) {
+					this.isMeasuring = true
+					this.progress = e.progress || 0
+					this.measuringTip = STATE_TIPS[dataType] || ''
+					this.errorMsg = ''
+					return
 				}
 
-				// 【排查日志】打印完整回调数据
-				console.log("[微体检] 完整回调数据:", JSON.stringify(e));
-				console.log("[微体检] dataType:", e.dataType, "progress:", e.progress, "type:", e.type);
+				// 2 失败 / 3 设备忙 / 4 低电：结束测量
+				if (dataType === 2 || dataType === 3 || dataType === 4) {
+					pendingReportContent = null
+					this.isMeasuring = false
+					this.hasResult = false
+					this.progress = 0
+					this.measuringTip = ''
+					this.errorMsg = STATE_TIPS[dataType] || ''
+					return
+				}
 
-				// control: 1 开启 2 关闭
-				// dataType: 0 进度包 1 测量成功报告数据 2 测量失败无结果数据 3 设备正忙 4 设备低电
-				const dataType = e.dataType;
-				const progress = e.progress || 0;
+				// 1 成功报告（平铺）
+				if (dataType === 1) {
+					this.showReport(e.content || {})
+					return
+				}
 
-				switch (dataType) {
-					case 0:
-						// 进度包
-						self.progress = progress;
-						console.log("微体检测量进度:", progress);
-						break;
-
-					case 1:
-					// 测量成功报告数据
-					{
-						const content = e.content || {};
-						self.isMeasuring = false;
-						self.hasResult = true;
-						self.progress = 100;
-						self.microCheckData = {
-							heartRate: content.heartRate || 0,
-							bloodOxygen: content.bloodOxygen || 0,
-							pressure: content.pressure || 0,
-							emotion: content.emotion || 0,
-							fatigueLevel: content.fatigueLevel || 0,
-							bloodSugar: content.bloodSugar || 0,
-							bodyTemperature: content.bodyTemperature || 0,
-							highPressure: content.highPressure || 0,
-							lowPressure: content.lowPressure || 0,
-							hrv: content.hrv || 0
-						};
-						console.log("微体检测量完成:", content);
+				// 5 成功报告（可能分包）
+				if (dataType === 5) {
+					pendingReportContent = Object.assign({}, pendingReportContent, e.content || {})
+					const total = Number(e.total) || 1
+					const current = Number(e.current) || 1
+					if (current >= total) {
+						const content = pendingReportContent
+						pendingReportContent = null
+						this.showReport(content)
 					}
-					break;
+				}
+			},
 
-					case 2:
-						// 测量失败无结果数据
-						self.isMeasuring = false;
-						self.hasResult = false;
-						self.errorMsg = '测量失败，无结果数据';
-						console.log("微体检测量失败");
-						break;
+			// 测量成功，归一化并展示报告
+			showReport(content) {
+				this.isMeasuring = false
+				this.hasResult = true
+				this.progress = 100
+				this.errorMsg = ''
+				this.measuringTip = ''
+				this.liveHeartRate = 0
+				this.report = this.buildReport(content)
+			},
 
-					case 3:
-						// 设备正忙
-						self.isMeasuring = false;
-						self.hasResult = false;
-						self.errorMsg = '设备正忙，请稍后再试';
-						console.log("设备正忙");
-						break;
+			// 归一化：兼容 uniapp 平铺字段与原生版的嵌套报告字段
+			buildReport(content) {
+				const c = content || {}
 
-					case 4:
-						// 设备低电
-						self.isMeasuring = false;
-						self.hasResult = false;
-						self.errorMsg = '设备电量低，请充电后再试';
-						console.log("设备低电");
-						break;
+				// 血压：优先嵌套(optical/pump/置 05)，其次平铺 highPressure/lowPressure
+				const optical = c.opticalBloodPressure
+				const pump = c.pumpBloodPressure
+				const bp = optical || pump
+				let bloodPressure
+				if (bp) {
+					bloodPressure = bp.highPressure + '/' + bp.lowPressure
+				} else if (c.highPressure !== undefined || c.lowPressure !== undefined) {
+					bloodPressure = c.highPressure + '/' + c.lowPressure
+				} else if (c.bloodPressure !== undefined) {
+					bloodPressure = typeof c.bloodPressure === 'object' ?
+						(c.bloodPressure.highPressure + '/' + c.bloodPressure.lowPressure) :
+						c.bloodPressure
+				}
 
-					default:
-						break;
+				// 体温：05 为 {rawTemperature, bodyTemperature}，01 为数值
+				let bodyTemperature
+				if (c.bodyTemperature !== undefined) {
+					bodyTemperature = typeof c.bodyTemperature === 'object' ?
+						c.bodyTemperature.bodyTemperature : c.bodyTemperature
+				}
+
+				// 血糖：05 为 {displayType, value}，01 为数值(mmol/L)
+				let bloodSugar
+				if (c.bloodSugar !== undefined) {
+					if (typeof c.bloodSugar === 'object') {
+						bloodSugar = c.bloodSugar.displayType === 'level' ?
+							('等级 ' + c.bloodSugar.value) : c.bloodSugar.value
+					} else {
+						bloodSugar = c.bloodSugar
+					}
+				}
+
+				// 情绪/疲劳度：描述 + 数值
+				const emotion = c.emotion !== undefined ?
+					(this.getEmotionText(c.emotion) + '(' + c.emotion + ')') : undefined
+				const fatigueLevel = c.fatigueLevel !== undefined ?
+					(this.getFatigueText(c.fatigueLevel) + '(' + c.fatigueLevel + ')') : undefined
+
+				// 个人基本信息（仅 05 报告有）
+				const basicInfoList = []
+				if (c.basicInfo) {
+					basicInfoList.push({ label: '性别', value: c.basicInfo.gender === 'male' ? '男' : '女' })
+					basicInfoList.push({ label: '年龄(岁)', value: c.basicInfo.age })
+					basicInfoList.push({ label: '身高(cm)', value: c.basicInfo.height })
+					basicInfoList.push({ label: '体重(kg)', value: c.basicInfo.weight })
+				}
+
+				// 皮电（仅 05 报告有）
+				const skinList = []
+				if (c.skinElectrical) {
+					const s = c.skinElectrical
+					const riskText = ['低', '中', '高']
+					skinList.push({ label: '情绪', value: this.getEmotionText(s.emotion) + '(' + s.emotion + ')' })
+					skinList.push({ label: '皮肤含水量(%)', value: s.skinMoisture })
+					skinList.push({
+						label: '抑郁症风险',
+						value: riskText[s.depressionRisk] !== undefined ? riskText[s.depressionRisk] : s.depressionRisk
+					})
+					skinList.push({ label: '交感神经活跃度', value: s.snsActivation })
+					skinList.push({ label: '皮质醇(ug/L)', value: s.cortisol })
+				}
+
+				// 血液成分（仅 05 报告有）
+				const bloodComponentList = []
+				if (c.bloodComponent) {
+					const b = c.bloodComponent
+					bloodComponentList.push({ label: '尿酸(μmol/L)', value: b.uricAcid })
+					bloodComponentList.push({ label: '总胆固醇(mmol/L)', value: b.cholesterol })
+					bloodComponentList.push({ label: '甘油三酯(mmol/L)', value: b.triglyceride })
+					bloodComponentList.push({ label: '高密度脂蛋白(mmol/L)', value: b.highDensityLipoprotein })
+					bloodComponentList.push({ label: '低密度脂蛋白(mmol/L)', value: b.lowDensityLipoprotein })
+				}
+
+				// 身体成分（仅 05 报告有，字段按设备支持情况返回）
+				const bodyCompositionList = []
+				if (c.bodyComposition) {
+					for (let i = 0; i < BODY_COMPOSITION_FIELDS.length; i++) {
+						const f = BODY_COMPOSITION_FIELDS[i]
+						const v = c.bodyComposition[f.key]
+						if (v !== undefined) {
+							bodyCompositionList.push({ label: f.label, value: v })
+						}
+					}
+				}
+
+				return {
+					heartRate: c.heartRate,
+					bloodOxygen: c.bloodOxygen,
+					pressure: c.pressure,
+					hrv: c.hrv,
+					bloodPressure: bloodPressure,
+					bodyTemperature: bodyTemperature,
+					bloodSugar: bloodSugar,
+					emotion: emotion,
+					fatigueLevel: fatigueLevel,
+					basicInfoList: basicInfoList,
+					skinList: skinList,
+					bloodComponentList: bloodComponentList,
+					bodyCompositionList: bodyCompositionList
 				}
 			},
 
 			// 获取情绪描述
 			getEmotionText(emotion) {
 				if (emotion >= -10 && emotion <= -5) {
-					return '情绪低落';
+					return '情绪低落'
 				} else if (emotion > -5 && emotion <= -2) {
-					return '有些低落';
+					return '有些低落'
 				} else if (emotion > -2 && emotion <= 2) {
-					return '情绪平稳';
+					return '情绪平稳'
 				} else if (emotion > 2 && emotion <= 5) {
-					return '情绪较好';
+					return '情绪较好'
 				} else if (emotion > 5 && emotion <= 10) {
-					return '情绪很好';
+					return '情绪很好'
 				}
-				return '未知';
+				return '未知'
 			},
 
 			// 获取疲劳度描述
 			getFatigueText(fatigue) {
 				if (fatigue >= 0 && fatigue <= 2) {
-					return '精力充沛';
+					return '精力充沛'
 				} else if (fatigue > 2 && fatigue <= 4) {
-					return '轻度疲劳';
+					return '轻度疲劳'
 				} else if (fatigue > 4 && fatigue <= 6) {
-					return '中度疲劳';
+					return '中度疲劳'
 				} else if (fatigue > 6 && fatigue <= 8) {
-					return '重度疲劳';
+					return '重度疲劳'
 				} else if (fatigue > 8) {
-					return '极度疲劳';
+					return '极度疲劳'
 				}
-				return '未知';
+				return '未知'
 			},
 
 			// 开始微体检测量
 			microCheckStart() {
-				let self = this;
-
-				// 【排查日志】打印设备信息
-				const bleInfo = uni.getStorageSync('bleInfo');
-				console.log("[微体检] 当前蓝牙设备信息:", JSON.stringify(bleInfo));
-				console.log("[微体检] 设备芯片类型 deviceChip:", bleInfo?.deviceChip);
+				pendingReportContent = null
 
 				// 重置数据
-				self.isMeasuring = true;
-				self.hasResult = false;
-				self.progress = 0;
-				self.errorMsg = '';
-				self.microCheckData = {
-					heartRate: 0,
-					bloodOxygen: 0,
-					pressure: 0,
-					emotion: 0,
-					fatigueLevel: 0,
-					bloodSugar: 0,
-					bodyTemperature: 0,
-					highPressure: 0,
-					lowPressure: 0,
-					hrv: 0
-				};
+				this.isMeasuring = true
+				this.hasResult = false
+				this.progress = 0
+				this.errorMsg = ''
+				this.measuringTip = ''
+				this.liveHeartRate = 0
+				this.report = createEmptyReport()
 
 				// 发送开始微体检测量指令
-				console.log("[微体检] 发送开始测量指令...");
-				veepooFeature.veepooSendMicroCheckDataManager({
-					switch: 'start'
-				});
-				console.log("[微体检] 开始测量指令已发送，等待蓝牙回调...");
+				veepooFeature.veepooSendMicroCheckDataManager({ switch: 'start' })
 			},
 
 			// 停止微体检测量
 			microCheckStop() {
-				let self = this;
-				self.isMeasuring = false;
+				this.isMeasuring = false
 
 				// 发送停止微体检测量指令
-				veepooFeature.veepooSendMicroCheckDataManager({
-					switch: 'stop'
-				});
-				console.log("停止微体检测量");
+				veepooFeature.veepooSendMicroCheckDataManager({ switch: 'stop' })
 			}
 		}
 	}
 </script>
 
-<style>
-	.container {
-		padding: 20px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
+<style scoped>
+	.box {
+		padding: 30rpx;
+		box-sizing: border-box;
 	}
 
-	.title {
-		font-size: 18px;
+	.header {
+		text-align: center;
+		padding: 20rpx 0 30rpx;
+	}
+
+	.header-title {
+		font-size: 36rpx;
 		font-weight: bold;
-		margin-bottom: 20px;
+		color: #333;
 	}
 
-	/* 进度区域 */
-	.progress-area {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 30px 20px;
-		background-color: #f5f5f5;
-		border-radius: 10px;
-		margin-bottom: 20px;
+	/* 进度 */
+	.progress-wrap {
+		margin-bottom: 30rpx;
 	}
 
 	.progress-text {
-		font-size: 18px;
-		color: #07c160;
-		font-weight: bold;
-		margin-bottom: 20px;
+		font-size: 28rpx;
+		color: #666;
+		margin-bottom: 12rpx;
 	}
 
 	.progress-bar {
-		width: 80%;
-	}
-
-	.progress-tip {
-		margin-top: 15px;
-		font-size: 14px;
-		color: #999;
-	}
-
-	/* 结果区域 */
-	.result-area {
 		width: 100%;
-		padding: 15px;
-		background-color: #fff;
-		border-radius: 10px;
-		border: 1px solid #eee;
-		margin-bottom: 20px;
+		height: 16rpx;
+		background: #f0f0f0;
+		border-radius: 10rpx;
+		overflow: hidden;
 	}
 
-	.result-title {
-		font-size: 16px;
-		font-weight: bold;
-		color: #333;
-		margin-bottom: 15px;
-		text-align: center;
+	.progress-bar-fill {
+		height: 100%;
+		background: #00b0fb;
+		border-radius: 10rpx;
+		transition: width 0.3s ease;
 	}
 
-	.result-grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-between;
-		margin-bottom: 10px;
-	}
-
-	.result-item {
-		width: 48%;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 15px 10px;
-		background-color: #f9f9f9;
-		border-radius: 8px;
-		margin-bottom: 10px;
-	}
-
-	.item-value {
-		font-size: 24px;
-		font-weight: bold;
-		color: #07c160;
-	}
-
-	.item-label {
-		font-size: 12px;
-		color: #666;
-		margin-top: 5px;
+	.progress-sub {
+		font-size: 24rpx;
+		color: #00b0fb;
+		margin-top: 10rpx;
 	}
 
 	/* 错误提示 */
-	.error-area {
-		width: 100%;
-		padding: 20px;
-		background-color: #fff2f2;
-		border-radius: 10px;
-		border: 1px solid #ffcccc;
-		margin-bottom: 20px;
-	}
-
 	.error-text {
-		font-size: 14px;
-		color: #fa5151;
+		font-size: 28rpx;
+		color: #ff6b6b;
 		text-align: center;
+		margin-bottom: 20rpx;
 	}
 
-	/* 按钮区域 */
-	.btn-area {
-		width: 100%;
+	/* 数据卡片 */
+	.card {
+		background: #fff;
+		border-radius: 16rpx;
+		padding: 24rpx;
+		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+		margin-bottom: 24rpx;
+	}
+
+	.card-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 20rpx;
+	}
+
+	.data-grid {
+		display: flex;
+		flex-wrap: wrap;
+	}
+
+	.data-item {
+		width: 33.33%;
+		box-sizing: border-box;
+		padding: 12rpx 0;
 		display: flex;
 		flex-direction: column;
-		gap: 15px;
-		margin-bottom: 20px;
+	}
+
+	.data-label {
+		font-size: 24rpx;
+		color: #999;
+		margin-bottom: 6rpx;
+	}
+
+	.data-value {
+		font-size: 28rpx;
+		color: #333;
+		font-weight: 500;
+	}
+
+	/* 按钮 */
+	.btn-group {
+		display: flex;
+		gap: 20rpx;
+		margin: 20rpx 0;
 	}
 
 	.btn {
-		width: 100%;
-		height: 45px;
-		line-height: 45px;
-		border-radius: 8px;
-		font-size: 16px;
+		flex: 1;
+		border-radius: 12rpx;
+		font-size: 30rpx;
+		color: #fff;
 	}
 
 	.btn-start {
-		background-color: #07c160;
-		color: #fff;
+		background-color: #00b0fb;
 	}
 
 	.btn-start[disabled] {
-		background-color: #a0e8b8;
-		color: #fff;
+		background-color: #9fdcf5;
 	}
 
 	.btn-stop {
-		background-color: #fa5151;
-		color: #fff;
+		background-color: #ff6b6b;
 	}
 
 	.btn-stop[disabled] {
-		background-color: #f8a8a8;
-		color: #fff;
+		background-color: #ffc1c1;
 	}
 
-	/* 说明区域 */
-	.info-area {
-		width: 100%;
-		padding: 15px;
-		background-color: #fff;
-		border-radius: 8px;
-		border: 1px solid #eee;
-	}
-
-	.info-title {
-		font-size: 14px;
-		font-weight: bold;
-		color: #333;
-		margin-bottom: 10px;
-	}
-
+	/* 说明 */
 	.info-item {
-		font-size: 13px;
+		font-size: 26rpx;
 		color: #666;
-		line-height: 24px;
+		line-height: 44rpx;
 	}
 </style>

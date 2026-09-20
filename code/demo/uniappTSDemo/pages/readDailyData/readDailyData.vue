@@ -38,6 +38,9 @@
 				device: {}
 			}
 		},
+		onShow() {
+			this.notifyMonitorValueChange()
+		},
 		methods: {
 			onLoad() {
 				let data = {
@@ -45,9 +48,7 @@
 				}
 				veepooBle.veepooUniAppSDKRawDataShowStatus(data)
 			},
-			onShow() {
-				this.notifyMonitorValueChange()
-			},
+
 
 			readData(e) {
 				let self = this;
@@ -57,7 +58,7 @@
 					package: 0
 				}
 
-				self.notifyMonitorValueChange();
+				// self.notifyMonitorValueChange();
 
 				veepooFeature.veepooSendReadDailyDataManager(data);
 				console.log('实现了读取日常的数据接口')

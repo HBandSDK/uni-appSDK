@@ -77,7 +77,7 @@
 					console.log("压力测量监听蓝牙回调=>", e);
 					// type 58 为压力测量数据类型（根据实际SDK文档调整）
 					if (e.type == 58) {
-						let stressValue = e.content.stress || 0;
+						let stressValue = e.content.pressure || 0;
 						let stressLevelText = self.getStressLevelText(stressValue);
 
 						self.stress = stressValue;

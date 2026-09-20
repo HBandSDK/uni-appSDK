@@ -96,7 +96,7 @@
 					ipAddress: "vphband.com", // ip地址
 					port: 34421, // 端口
 					userName: "你丫的我绑定账号了", // 用户名
-					password: "YOUR_4G_PASSWORD", // 密码
+					password: "PdbGqvN2BhOpYDtiCxiLNA==", // 密码
 					// switch: 1, // 开关  0 关闭 1 开启
 					// dataUploadSwitch: 1, // 数据上传开关 0 关闭 1 开启
 					// uploadInterval: 10, // 上传间隔 分钟
@@ -128,7 +128,7 @@
 			// 密码
 			setup4GPassword() {
 				veepooFeature.veepooSetup4GServiceInfoManager({
-					password: "YOUR_4G_PASSWORD", // 密码
+					password: "AdcGqvN2BhOpYDtiCxiLNA==", // 密码
 				})
 			},
 

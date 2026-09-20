@@ -4,7 +4,7 @@
 		<scroll-view class="ble-scroll" scroll-y="true" refresher-enabled="true" :refresher-triggered="refreshing"
 			@refresherrefresh="onRefresh">
 			<view v-for="(item, index) in bleList" :key="item.deviceId || index" class="ble_item"
-				@click="connectBle(item)">
+				:class="{ 'ble_item-selected': selectedIndex === index }" @click="connectBle(item, index)">
 				<text>名称：{{ item.name }}</text>
 				<text>mac：{{ item.mac }}</text>
 				<text>信号：{{ item.RSSI }}</text>
@@ -42,12 +42,14 @@
 				bleList: [],
 				connectionState: false,
 				refreshing: false,
+				selectedIndex: -1,
 
 			}
 		},
 		onShow() {
 			// 进入页面即开始扫描（首次进入与每次返回都会触发）
 			this.startScan();
+			// this.notifyMonitorValueChange()
 		},
 		onHide() {
 			this.stopScan();
@@ -112,7 +114,7 @@
 				})
 			},
 
-			connectBle(e : any) {
+			connectBle(e : any, index : number) {
 
 				console.log("点击了连接");
 				let self = this;
@@ -122,6 +124,7 @@
 					return
 				}
 				this.connectionState = true;
+				this.selectedIndex = index;
 
 
 				this.stopScan();
@@ -130,32 +133,100 @@
 				deviceList.forEach((item : any) => {
 					if (item.mac == e.mac) {
 						uni.setStorageSync('bleInfo', item);
-						veepooBle.veepooUniAppSDKBleConnectionServicesCharacteristicsNotifyManager(item, function (result : any) {
-							console.log("result=>", result)
-							if (result.connection) {
-								// 获取当前服务，订阅监听
-								self.notifyMonitorValueChange();
-								uni.showToast({
-									icon: 'success',
-									title: '连接成功'
-								})
+
+						// veepooBle.veepooUniAppSDKBleConnectionServicesCharacteristicsNotifyManager(item, function (result : any) {
+						// 	console.log("result=>", result)
+						// 	if (result.connection) {
+						// 		// 获取当前服务，订阅监听
+						// 		self.notifyMonitorValueChange();
+						// 		uni.showToast({
+						// 			icon: 'success',
+						// 			title: '连接成功'
+						// 		})
 
 
-								setTimeout(() => {
-									let data = {
-										isPair: false
+						// 		setTimeout(() => {
+						// 			let data = {
+						// 				isPair: true
+						// 			}
+						// 			veepooFeature.veepooBlePasswordCheckManager(data)
+						// 			let pairedDevices = uni.getStorageSync('pairedDevices')
+						// 			console.log('配对设备信息02：', pairedDevices)
+						// 		}, 500)
+
+
+						// 		uni.navigateBack({
+						// 			delta: 1
+						// 		})
+
+						// 	}
+
+
+						// })
+
+
+
+
+						uni.openBluetoothAdapter({
+							success(res) {
+								console.log(res)
+
+
+								uni.createBLEConnection({
+									deviceId: item.deviceId,
+									success() {
+										console.log('2.自行蓝牙连接,连接成功,开始秘钥认证!')
+										veepooBle.veepooUniAppSDKHandoverServiceManager(item, function (result : any) {
+											console.log("result=>", result)
+											if (result.status) {
+												// 获取当前服务，订阅监听
+												self.notifyMonitorValueChange();
+												uni.showToast({
+													icon: 'success',
+													title: '连接成功'
+												})
+
+
+												setTimeout(() => {
+													let data = {
+														isPair: true
+													}
+													veepooFeature.veepooBlePasswordCheckManager(data)
+													let pairedDevices = uni.getStorageSync('pairedDevices')
+													// 仅安卓app、安卓小程序发起配对时需要调用此接口
+													veepooFeature.veepooAndroidPairWithPasswordVerifyManager(item, function (res) {
+														if (res.pairSuccess) {
+															// 配对成功
+															console.log('配对成功', res.pairResult)
+														} else {
+															// 配对失败/取消配对
+															// 安卓端取消配对后，安卓系统会自动断开双模连接(BLE、BT)，用户需要进行自行重连
+															console.log('配对失败', res.err)
+														}
+													})
+													// const bleDate = uni.getStorageSync('bleDate');
+													// console.log('bleDate:', bleDate);
+													console.log('配对设备信息02：', pairedDevices)
+												}, 500)
+
+
+												uni.navigateBack({
+													delta: 1
+												})
+
+											}
+										})
+									},
+									fail(err) {
+										console.log('2.自行蓝牙连接,连接失败：', err)
+										veepooFeature.veepooAndroidPairWithPasswordVerifyManager(item, function (res) {
+											console.log('配对设备BT:', res)
+										})
 									}
-									veepooFeature.veepooBlePasswordCheckManager(data)
-								}, 500)
-
-
-								uni.navigateBack({
-									delta: 1
 								})
-
+							}, fail(err) {
+								console.log('打开适配器失败', err)
 							}
-
-
 						})
 					}
 				})
@@ -218,5 +289,15 @@
 		gap: 3rpx;
 		border: 1px solid gray;
 		padding: 16rpx;
+		transition: background-color 0.15s;
 	}
+
+	.ble_item:active {
+		background-color: #e0e0e0;
+	}
+
+	/* .ble_item-selected {
+		background-color: #d0e8ff;
+		border-color: #00b0fb;
+	} */
 </style>

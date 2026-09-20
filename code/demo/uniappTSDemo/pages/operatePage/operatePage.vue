@@ -2,8 +2,11 @@
 	<view class="main-box">
 		<view class="top-buttom">
 			<view class="buttom" @click="skipDeviceGet()">设备扫描</view>
+			<view class="buttom buttom-disconnect" :class="{ 'buttom-disabled': !connected }"
+				@click="skipPages('DisconnectBluetooth')">断开连接</view>
 		</view>
-		<!-- 显示设备相关信息 -->
+
+		<!-- 显示设备相关信息（仅连接时显示） -->
 		<view class="deviceInfo">
 			<view>
 				<text>设备名称：{{device.name}}</text>
@@ -15,14 +18,23 @@
 				<text>固件版本：{{device.VPDeviceVersion}}</text>
 			</view>
 			<view>
-				<text>电池电量：<text v-if="typeof device.VPDeviceElectricPercent === 'number'">{{device.VPDeviceElectricPercent}} %</text></text>
+				<text>电池电量：<text
+						v-if="typeof device.VPDeviceElectricPercent === 'number'">{{device.VPDeviceElectricPercent}}
+						%</text></text>
 			</view>
 			<view>
-				<text>实时步数：<text v-if="typeof device.step === 'number'">{{device.step}}步 </text><text v-if="typeof device.distance === 'number'"> {{device.distance}}米 </text><text v-if="typeof device.calorie === 'number'"> {{device.calorie}}千卡</text></text>
+				<text>实时步数：<text v-if="typeof device.step === 'number'">{{device.step}}步 </text><text
+						v-if="typeof device.distance === 'number'"> {{device.distance}}米 </text><text
+						v-if="typeof device.calorie === 'number'"> {{device.calorie}}千卡</text></text>
 			</view>
 		</view>
 
-		<!-- 页面渲染 -->
+		<!-- 未连接提示 -->
+		<!-- <view class="no-device" v-if="!connected">
+			<text>未连接设备，请先扫描连接</text>
+		</view> -->
+
+		<!-- 页面渲染（仅连接时显示） -->
 		<view class="page-box">
 			<view v-for="(item,index) in listDate" :key="item.name || index " class="page-item"
 				@click="skipPages(item.path)">
@@ -276,11 +288,27 @@
 					name: 'YM28PRO',
 					path: '/pages/YM28PROSendCommand/YM28PROSendCommand'
 				},
-				// 表盘相关：dial 页为早期移植，依赖较多杰里 RCSP 流程，暂保留入口注释
 				// {
-				// 	name: '表盘相关',
-				// 	path: '/pages/dial/dial'
-				// }
+				// 	name: 'BTfun',
+				// 	path: '/pages/BTfun/BTfun'
+				// },
+				// 表盘相关：dial 页为早期移植，依赖较多杰里 RCSP 流程，暂保留入口注释
+				{
+					name: '表盘相关',
+					path: '/pages/dial/dial'
+				},
+				{
+					name: '运动控制',
+					path: '/pages/sportControl/sportControl'
+				},
+				{
+					name: '皮肤电',
+					path: '/pages/skinElectrical/skinElectrical'
+				},
+				{
+					name: '世界时钟',
+					path: '/pages/worldClock/worldClock'
+				}
 				],
 				valData: {
 					heartRate: 'start',
@@ -294,6 +322,7 @@
 			this.getPairData();
 			const bleInfo = uni.getStorageSync('bleInfo');
 			console.log('读取到的蓝牙信息：', bleInfo);
+
 			if (bleInfo) {
 				this.device = {
 					name: bleInfo.name || '',
@@ -307,10 +336,13 @@
 					calorie: typeof this.device.calorie === 'number' ? this.device.calorie : '',
 					distance: typeof this.device.distance === 'number' ? this.device.distance : ''
 				};
+				this.connected = true;
 				// 覆盖式订阅 notify，绑定解析器
 				this.notifyMonitorValueChange();
 			} else {
 				console.warn('未找到蓝牙设备信息');
+				this.connected = false;
+				this.device = {};
 			};
 
 
@@ -333,6 +365,23 @@
 					})
 				}, 2000);
 			},
+			// 获取已连接的蓝牙设备
+			// getConnectedBleDevice(){
+			// 	let self=this;
+			// 	uni.getConnectedBluetoothDevices({
+			// 		services:['FFFF','FEE7','0001','180D'],
+			// 		success(res) {
+			// 			let device =self.device;
+			// 			console.log("已连接的蓝牙设备res=>", res)
+			// 			res.devices.forEach(item=>{
+			// 				let bleInfo =uni.getStorageSync('bleInfo');
+			// 				if(bleInfo.deviceId == item.deviceId){
+
+			// 				}
+			// 			})
+			// 		}
+			// 	})
+			// },
 			getPairData() {
 				let self = this;
 				let res = uni.getStorageSync('pairData');
@@ -356,6 +405,11 @@
 				console.log(path)
 				if (path == 'DisconnectBluetooth') {
 					veepooFeature.veepooSendDisconnectBluetoothDataManager()
+					// 断开后隐藏设备信息和功能入口（不影响本地缓存 bleInfo）
+					this.connected = false;
+					this.device = {};
+					// 返回扫描页让用户重新连接
+					uni.navigateBack({ delta: 1 });
 					return
 				}
 				if (path == 'resettingTheDevice') {
@@ -420,7 +474,7 @@
 					device.VPDeviceVersion = value.content.VPDeviceVersion;
 					device.VPDeviceMAC = value.content.VPDeviceMAC;
 					this.ElectricQuantityManager();
-					setTimeout(()=>{
+					setTimeout(() => {
 						this.StepCalorieDistanceManager();
 					}, 300)
 				} else if (value.type == 2) {
@@ -469,15 +523,25 @@
 		line-height: 80rpx;
 		font-size: 16px;
 		color: #00b0fb;
+		transition: opacity 0.15s;
 	}
 
-	.buttom-active {
+	.buttom:active {
+		opacity: 0.6;
+	}
+
+	.buttom-disconnect {
+		color: #00b0fb;
+	}
+
+	.buttom-disabled {
 		color: #999999;
 	}
 
 	.top-buttom {
 		display: flex;
 		justify-content: space-between;
+		gap: 20px
 	}
 
 	.deviceInfo {
@@ -504,6 +568,18 @@
 		line-height: 80rpx;
 		font-size: 12px;
 		color: white;
+		transition: opacity 0.15s;
+	}
+
+	.page-item:active {
+		opacity: 0.6;
+	}
+
+	.no-device {
+		text-align: center;
+		color: #999;
+		font-size: 14px;
+		margin-top: 60rpx;
 	}
 
 	.active {

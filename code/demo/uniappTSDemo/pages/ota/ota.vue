@@ -73,6 +73,8 @@
 			this._rcspOTAWrapperEventCallback = null;
 			this.reconnectingDeviceId = "";
 			this.rcspOTAManager = null;
+			// 本次读取的固件文件名（用于回显）
+			this._pendingFirmwareName = "";
 
 			BleDataHandler.init();
 
@@ -97,61 +99,6 @@
 			// 之前 initOTA() 只定义没调用，蓝牙即使连回来了 Reconnect 也无从知晓，
 			// 一路空等到 onReconnectFailed -> OTA 报 -112 Waiting for reconnect device timeout。
 			this.initOTA();
-
-			// const bleInfo = uni.getStorageSync('bleInfo');
-			// const sysInfo = uni.getSystemInfoSync();
-
-			// const sysPLT = sysInfo.platform;
-			// if (sysPLT === 'ios') {
-			// 	uni.getBluetoothDevices({
-			// 		success(res) {
-			// 			const list = (res.devices || []) as Array<WechatMiniprogram.BlueToothDevice>;
-			// 			console.log('[连接诊断] 已连接BLE设备', list.map(d => d.deviceId));
-
-			// 			const cur = (bleInfo?.deviceId && list.find(d => d.deviceId === bleInfo.deviceId)) || list[0];
-			// 			if (cur) {
-			// 				this._takeOverDevice(cur.deviceId, cur.name || bleInfo?.name || '');
-			// 			} else if (bleInfo?.deviceId) {
-			// 				this._takeOverDevice(bleInfo.deviceId, bleInfo.name || '');
-			// 			} else {
-			// 				uni.showToast({ title: '未找到已连接设备，请先连接' });
-			// 			}
-			// 		}, fail: (e) => {
-			// 			console.error('[连接诊断] getConnectedBluetoothDevices 失败', e);
-			// 			if (bleInfo?.deviceId) {
-			// 				this._takeOverDevice(bleInfo.deviceId, bleInfo.name || '');
-			// 			} else {
-			// 				uni.showToast({ title: '未找到已连接设备，请先连接' });
-			// 			}
-			// 		}
-			// 	})
-			// } else {
-			// 	// 获取当前已连接设备，解决鸿蒙 deviceId 失效问题
-			// 	uni.getConnectedBluetoothDevices({
-			// 		services: [],
-			// 		success: (res) => {
-			// 			const list = (res.devices || []) as Array<WechatMiniprogram.BlueToothDevice>;
-			// 			console.log('[连接诊断] 已连接BLE设备', list.map(d => d.deviceId));
-
-			// 			const cur = (bleInfo?.deviceId && list.find(d => d.deviceId === bleInfo.deviceId)) || list[0];
-			// 			if (cur) {
-			// 				this._takeOverDevice(cur.deviceId, cur.name || bleInfo?.name || '');
-			// 			} else if (bleInfo?.deviceId) {
-			// 				this._takeOverDevice(bleInfo.deviceId, bleInfo.name || '');
-			// 			} else {
-			// 				uni.showToast({ title: '未找到已连接设备，请先连接' });
-			// 			}
-			// 		},
-			// 		fail: (e) => {
-			// 			console.error('[连接诊断] getConnectedBluetoothDevices 失败', e);
-			// 			if (bleInfo?.deviceId) {
-			// 				this._takeOverDevice(bleInfo.deviceId, bleInfo.name || '');
-			// 			} else {
-			// 				uni.showToast({ title: '未找到已连接设备，请先连接' });
-			// 			}
-			// 		}
-			// 	});
-			// }
 
 			const bleInfo = uni.getStorageSync('bleInfo');
 			const sysInfo = uni.getSystemInfoSync();
@@ -199,8 +146,17 @@
 		},
 
 		onUnload() {
+			// 回连中有定时器+扫描在跑，退出页必须停掉，否则切后台/返回后仍空扫到超时
+			try { this._Reconnect?.stopReconnect(); } catch (e) { console.error('[回连] onUnload stopReconnect 异常', e); }
+			if (this.rcspOTAManager) {
+				try { this.rcspOTAManager.release(); } catch (e) { }
+				this.rcspOTAManager = null;
+			}
 			DeviceManager.removeObserve(this._onRCSPBluetoothEvent);
 			RCSPManager.removeObserve(this._rcspOTAWrapperEventCallback);
+			if (this._RCSPWrapperEventCallback) {
+				RCSPManager.removeObserve(this._RCSPWrapperEventCallback);
+			}
 		},
 
 		methods: {
@@ -223,25 +179,69 @@
 					success: (res : any) => { if (res.tempFiles && res.tempFiles[0]) that._processOtaFile(res.tempFiles[0]); }
 				});
 				// #endif
-				// App：加载内置固件(static/ota/firmware.ufw，打包进 App)。最小验证用，绕过文件选择器。
+				// App：列出 static/ota/ 下所有 .ufw，让用户选一个再读
 				// #ifdef APP-PLUS
-				that._loadBundledFirmware();
+				that._pickFirmwareFromDir();
 				// #endif
 				// #ifdef H5
 				uni.showToast({ title: 'H5 端请用真机运行读取内置固件', icon: 'none' });
 				// #endif
 			},
-			// 读取打包进 App 的内置固件(_www/static/ota/firmware.ufw) -> otaData
+
+			// APP 端：列出 _www/static/ota/ 下的所有 .ufw，弹选择框让用户挑
+			_pickFirmwareFromDir() {
+				const that = this;
+				const dir = '_www/static/ota/';
+				// @ts-ignore
+				plus.io.resolveLocalFileSystemURL(dir, (entry : any) => {
+					const reader = entry.createReader();
+					reader.readEntries((entries : any[]) => {
+						const list = (entries || [])
+							.filter(e => e.isFile && /\.ufw$/i.test(e.name))
+							.map(e => e.name)
+							.sort();
+						console.log('[固件] ' + dir + ' 下可用固件：', list);
+
+						if (list.length === 0) {
+							uni.showModal({
+								title: '未找到固件',
+								content: '目录 ' + dir + ' 下没有 .ufw 文件。\n请把固件放到 static/ota/ 后重新运行到手机。',
+								showCancel: false
+							});
+							return;
+						}
+						// 只有一个就不用弹了，直接读
+						if (list.length === 1) {
+							that._loadBundledFirmware(dir + list[0]);
+							return;
+						}
+						// 多个：ActionSheet 选择
+						uni.showActionSheet({
+							itemList: list,
+							success: (res) => {
+								const name = list[res.tapIndex];
+								if (name) that._loadBundledFirmware(dir + name);
+							}
+						});
+					}, (e : any) => {
+						that._onFirmwareFailed('读取目录失败: ' + ((e && e.message) || JSON.stringify(e)));
+					});
+				}, (e : any) => {
+					that._onFirmwareFailed('找不到目录 ' + dir + '：' + ((e && e.message) || JSON.stringify(e))
+						+ '。请确认 static/ota/ 已同步到手机(重新运行到手机)');
+				});
+			},
+
+			// 读取打包进 App 的内置固件(_www/static/ota/xxx.ufw) -> otaData
 			// 标准基座没有 uni.getFileSystemManager，所以走 plus.io。
 			// 曾经先试 plus.android 反射(Files.readAllBytes + Java Base64)，但 Java 原生数组
 			// 作为返回值跨不过 plus 桥：实测读完 3MB 耗时 5.9 秒后返回 null，必然降级——
 			// 这不是"偶发失败的快路径"而是恒定失败，纯属白等 6 秒，已删除。
 			// plus.io 读同一个文件只要 182ms，而且不依赖 plus.android，iOS 也能用。
-			_loadBundledFirmware() {
+			_loadBundledFirmware(rel : string) {
 				const that = this;
-				// ⚠️注意ufw为固件解压之后的文件，跨项目/设备号 升级错误的文件
-				// 会导致设备变转，如需验证升级，需配置指定项目匹配的固件
-				const rel = '_www/static/ota/firmware.ufw';
+				const baseName = rel.substring(rel.lastIndexOf('/') + 1);
+				that._pendingFirmwareName = baseName;
 				that.fileStatus = 1;
 				uni.showLoading({ title: '读取固件中...', mask: true });
 				// @ts-ignore
@@ -252,7 +252,7 @@
 						const expectSize = file.size || 0;
 						console.log('[固件] ' + rel + ' size=' + expectSize);
 						if (expectSize <= 0) {
-							that._onFirmwareFailed('固件为空(size=0)，请确认 static/ota/firmware.ufw 已同步到手机');
+							that._onFirmwareFailed('固件为空(size=0)，请确认 ' + rel + ' 已同步到手机');
 							return;
 						}
 						// @ts-ignore
@@ -274,9 +274,10 @@
 					});
 				}, (e : any) => {
 					that._onFirmwareFailed('找不到固件文件 ' + rel + '：' + ((e && e.message) || JSON.stringify(e))
-						+ '。请确认 static/ota/firmware.ufw 已同步到手机(重新运行到手机)');
+						+ '。请确认该文件已同步到手机(重新运行到手机)');
 				});
 			},
+
 			// 读取成功收口：只有真的拿到完整字节才算"已读取"。
 			// 任何一项校验不过都必须硬失败——拿残缺/损坏的固件去刷设备可能直接刷坏硬件，
 			// 设备侧的表现就是传完数据后 queryUpdateResult 返回 4(-105 upgrade file is damaged)。
@@ -300,15 +301,16 @@
 				// 根本不是一个完整的 ufw 包(截断/同步到手机的是旧文件/读错文件)，不必刷设备就能判定。
 				if (fp.tail16.indexOf('4a4c554657') === -1) {
 					this._onFirmwareFailed('不是完整的 ufw 包：末尾缺少 JLUFW 魔数(tail16=' + fp.tail16
-						+ ')。请确认 static/ota/firmware.ufw 已重新同步到手机');
+						+ ')。请确认 ' + (this._pendingFirmwareName || '该固件') + ' 已重新同步到手机');
 					return;
 				}
 				this.otaData = data;
-				this.fileName = 'firmware.ufw（内置）';
+				this.fileName = (this._pendingFirmwareName || 'firmware.ufw') + '（内置）';
 				this.fileInfo = '文件大小：' + data.length;
 				this.fileStatus = 2;
-				console.log('[固件] 读取成功 size=', data.length);
+				console.log('[固件] 读取成功 size=', data.length, 'file=', this._pendingFirmwareName);
 			},
+
 			// 固件指纹：拿来和电脑上的原文件逐项对比，确认字节没在读取链路里被改动
 			_firmwareFingerprint(data : Uint8Array) {
 				const hex = (arr : Uint8Array) => Array.from(arr)
@@ -321,6 +323,7 @@
 					sum32: sum
 				};
 			},
+
 			// 读取失败收口
 			_onFirmwareFailed(msg : any) {
 				uni.hideLoading();
@@ -331,6 +334,7 @@
 				this.fileName = '';
 				uni.showModal({ title: '固件读取失败', content: String(msg), showCancel: false });
 			},
+
 			// base64 字符串 -> Uint8Array（纯 JS 字符串操作，用 map 做 O(1) 查表，大文件也快）
 			_b64ToUint8(b64 : string) : Uint8Array {
 				const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -349,6 +353,7 @@
 				}
 				return out.subarray(0, p);
 			},
+
 			// 读取升级文件内容为 Uint8Array
 			_processOtaFile(tempFile : any) {
 				const that = this;
@@ -403,18 +408,15 @@
 				if (event.type === 'onConnection') {
 					const st = event.onConnectionEvent?.status;
 					const dev = event.onConnectionEvent?.device;
-					// status: 0=已断开 1=连接中 2=已连接 3=连接失败
-					const stLabel = st === 0 ? '已断开' : st === 1 ? '连接中' : st === 2 ? '已连接' : st === 3 ? '连接失败' : ('未知(' + st + ')');
-					console.log('[连接诊断] onConnection status=' + st + '(' + stLabel + ') device=' + dev?.deviceId);
-					// 回连期间连接失败(status=3)：通知 Reconnect 解锁并重新扫描重试，
-					// 否则一次失败就只能干等 80s 超时(-112)
-					if (st === 3 && dev?.deviceId) {
+					console.log('[连接诊断] onConnection status=' + st + ' device=' + dev?.deviceId);
+					// 回连期间连接失败/断开(status=3 连接失败 / status=0 断开)：通知 Reconnect 解锁并重新扫描重试，
+					// 否则一次失败就只能干等 80s 超时(-112)。Android 上连接失败可能走不同的回调
+					// 报 0 或 3，两个都纳入解锁，只要失败就立刻释放 connectingDevice 继续扫。
+					if ((st === 3 || st === 0) && dev?.deviceId) {
 						this._Reconnect?.onDeviceConnectFailed(dev.deviceId);
 					}
 				} else if (event.type === 'onDiscoveryStatus') {
-					const bStart = event.onDiscoveryStatusEvent?.bStart;
-					console.log('[连接诊断] onDiscoveryStatus ' + (bStart ? '扫描开始' : '扫描停止'));
-					if (!bStart) {
+					if (!event.onDiscoveryStatusEvent?.bStart) {
 						this._Reconnect?.onScanStop();
 					}
 				} else if (event.type === 'onDiscovery') {
@@ -441,12 +443,7 @@
 						console.log('[回连] onRcspInit isInit=' + isInit + ' device=' + devId
 							+ ' 期望=' + this.reconnectingDeviceId);
 						if (!isInit) return;
-						if (devId?.toUpperCase() !== this.reconnectingDeviceId?.toUpperCase()) {
-							// 设备回连后 RCSP 握手上报的 deviceId 与扫描锁定时的不一致(iOS 的 deviceId 是 UUID，可能变)。
-							// 这里不通知 Reconnect，超时定时器不会被清除，最终走到 onReconnectFailed(-112)。
-							console.warn('[回连] onRcspInit deviceId 与回连设备不一致，忽略(继续等待匹配设备或超时)');
-							return;
-						}
+						if (devId?.toUpperCase() !== this.reconnectingDeviceId?.toUpperCase()) return;
 						// 用原始 deviceId 查表，不要用大写后的：部分平台 deviceId 大小写敏感，查不到就白等超时
 						const bleDev = RCSPManager.getBluetoothDeviceByDeviceId(devId);
 						if (!bleDev) {
@@ -504,15 +501,22 @@
 					},
 
 					onNeedReconnect: (reConnectMsg : ReConnectMsg) => {
-						// 记录回连策略输入：isSupportNewReconnectADV 决定走 MAC 匹配还是回退到 名称/deviceId 匹配；
-						// platform 决定 iOS 走名称匹配、其它走 deviceId 匹配。这两个值是后续分支判定的根因。
-						console.log('[回连] onNeedReconnect 触发 isSupportNewReconnectADV=' + reConnectMsg.isSupportNewReconnectADV
-							+ ' platform=' + uni.getSystemInfoSync().platform
-							+ ' 当前OTA设备MAC=' + that.rcspOTAManager.getCurrentOTADeviceMac());
-						that._reconnectPrintedDev.clear();
-						that.otaProgressText = "正在回连设备...";
+							console.log("需要重连设备");
+							that._reconnectPrintedDev.clear();
+							that.otaProgressText = "正在回连设备...";
 
-						const op : ReconnectOp = {
+							// 停掉 DeviceManager 自带的自动回连(bleInit 里 isUseMultiDevice=true 启用的)。
+							// OTA 回连自有一套 Reconnect，两套同时跑会抢同一批扫描回调 + 同一把
+							// connecDevice：谁先发起，另一套的 connecDevice 因 isConnecting 直接 no-op，
+							// 但其 Reconnect.connectingDevice 已被锁死 -> 后续扫描全被吞 -> 干等 -112。
+							// 回连窗口内只允许 OTA 这一套，等它结束后 DeviceManager 会自动恢复再连。
+							try {
+								DeviceManager.reconnectImpl?.stopReconnect();
+							} catch (e) {
+								console.error('[回连] 停内置自动回连异常(忽略)', (e && (e as any).message) || e);
+							}
+
+							const op : ReconnectOp = {
 							startScanDevice() {
 								DeviceManager.starScan();
 							},
@@ -520,45 +524,33 @@
 								const oldDevice = that.rcspOTAManager.getCurrentOTADevice();
 								const oldMac = that.rcspOTAManager.getCurrentOTADeviceMac();
 
-								let matched = false;
-								let reason = '';
+								// 新回连 MAC 匹配：广播包里的 MAC == 旧MAC+1(单备份切换地址)。
+								// 只要广播包拿得到就尝试；即便解析不出目标 MAC 或 MAC 不匹配，
+								// 也不直接 return false，继续下落到 deviceId/设备名兜底，
+								// 避免"广播包拿不准"时把目标设备误判掉 -> 空扫到 -112。
 								if (reConnectMsg.isSupportNewReconnectADV && oldMac && scanDevice.advertisData) {
-									// 新回连方式：单备份升级会换 BLE 地址，目标 MAC = 旧 MAC + 1
-									const currMac = getDeviceDataMac(scanDevice);
-									const targetMac = incrementMacAddress(oldMac);
-									matched = currMac === targetMac;
-									reason = '新回连MAC匹配 oldMac=' + oldMac + ' targetMac=' + targetMac + ' currMac=' + (currMac || '(空)');
-								} else {
-									const sysInfo = uni.getSystemInfoSync();
-									const isIos = sysInfo.platform === 'ios';
-									if (isIos) {
-										// iOS：广播包/deviceId 都不可靠，只能靠设备名称子串匹配。
-										// 若 bleInfo.name 为空会恒返回 false——表现就是"扫到设备却永不命中"，一路空等到超时(-112)。
-										const bleInfo = uni.getStorageSync('bleInfo');
-										const targetName = bleInfo?.name;
-										const scanName = scanDevice.localName || '';
-										matched = !!targetName && scanName.includes(targetName);
-										reason = 'iOS名称匹配 targetName=' + (targetName || '(空)') + ' scanName=' + scanName
-											+ (!targetName ? ' [bleInfo.name 为空，恒不命中]' : '');
-									} else {
-										const oldId = oldDevice?.deviceId?.toUpperCase();
-										const scanId = scanDevice.deviceId?.toUpperCase();
-										matched = oldId === scanId;
-										reason = 'deviceId匹配 oldId=' + (oldId || '(空)') + ' scanId=' + (scanId || '(空)');
+									try {
+										const currMac = getDeviceDataMac(scanDevice);
+										const targetMac = incrementMacAddress(oldMac);
+										if (currMac && currMac === targetMac) {
+											return true;
+										}
+									} catch (e) {
+										console.error('[回连] getDeviceDataMac 异常(继续走兜底)', e);
 									}
 								}
 
-								// 每个设备每轮回连只打一次判定日志：onBluetoothDeviceFound 是高频回调，
-								// 不去重会把日志冲爆(鸿蒙 allowDuplicatesKey 还会反复上报同一设备)。
-								// advertisData 有无也要记录——它为空时新回连 MAC 分支会被跳过，回退到名称/deviceId 匹配。
-								const devKey = (scanDevice.deviceId || '?') + '|' + (scanDevice.localName || '');
-								if (!that._reconnectPrintedDev.has(devKey)) {
-									that._reconnectPrintedDev.add(devKey);
-									console.log('[回连] 扫描判定 ' + reason
-										+ ' advertisData=' + (scanDevice.advertisData ? '有' : '无')
-										+ ' -> ' + (matched ? '命中' : '跳过'));
+								// 兜底匹配
+								const sysInfo = uni.getSystemInfoSync();
+								const isIos = sysInfo.platform === 'ios';
+								if (isIos) {
+									const bleInfo = uni.getStorageSync('bleInfo');
+									const targetName = bleInfo?.name;
+									const scanName = scanDevice.localName || '';
+									return !!targetName && scanName.includes(targetName);
+								} else {
+									return oldDevice?.deviceId?.toUpperCase() === scanDevice.deviceId?.toUpperCase();
 								}
-								return matched;
 							},
 							// 整个函数包 try/catch：这里是被 uni 的 onBluetoothDeviceFound 原生回调同步调进来的，
 							// 异常抛出去会被原生桥吞掉，一行日志都看不到；而 Reconnect 在调本函数前就把

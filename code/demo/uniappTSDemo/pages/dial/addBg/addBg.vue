@@ -1,16 +1,18 @@
 <template>
-
 	<!--pages/function_test/dial_operate/dial_add_background/index.wxml-->
-	<view style="height: 100rpx;"></view>
-	<view class="blue-btn" @click="clickWay1">裁剪图片</view>
-	<view style="height: 100rpx;"></view>
-	<!-- <view  class="blue-btn" catchtap="clickWay2">方式二:传输资源文件</view> -->
-	<view style="height: 100rpx;"></view>
-	<view class="blue-btn" @click="clickCancelTransfer">取消传输</view>
-	<view>{{transferProgressText}}</view>
+	<view class="page">
+		<view style="height: 100rpx;"></view>
+		<view class="blue-btn" @click="clickWay1">裁剪图片</view>
+		<view style="height: 100rpx;"></view>
+		<!-- <view  class="blue-btn" catchtap="clickWay2">方式二:传输资源文件</view> -->
+		<view style="height: 100rpx;"></view>
+		<view class="blue-btn" @click="clickCancelTransfer">取消传输</view>
+		<view>{{transferProgressText}}</view>
 
-	<view>{{fileName}}</view>
-	<image :src="pathImage" mode="" />
+		<view>{{fileName}}</view>
+		<image :src="pathImage" mode="" />
+	</view>
+
 </template>
 
 <script lang="ts">
@@ -39,24 +41,37 @@
 				pathImage: ''
 			}
 		},
+		onLoad(options) {
+			this.pathImage = options.pathImage
+
+			console.log("options.pathImage=>", options)
+
+			// 获取屏幕信息
+			RCSPOpWatch?.getFlashInfo().then((res) => {
+				this.devScreenWidth = res.width
+				this.devScreenHeight = res.height
+				console.log("devScreenWidth : " + this.devScreenWidth);
+				console.log("devScreenHeight : " + this.devScreenHeight);
+			})
+		},
 		methods: {
 			/**
 			  * 生命周期函数--监听页面加载
 			  */
-			onLoad(options) {
+			// onLoad(options) {
 
-				this.pathImage = options.pathImage
+			// 	this.pathImage = options.pathImage
 
-				console.log("options.pathImage=>", options)
+			// 	console.log("options.pathImage=>", options)
 
-				// 获取屏幕信息
-				RCSPOpWatch?.getFlashInfo().then((res) => {
-					this.devScreenWidth = res.width
-					this.devScreenHeight = res.height
-					console.log("devScreenWidth : " + this.devScreenWidth);
-					console.log("devScreenHeight : " + this.devScreenHeight);
-				})
-			},
+			// 	// 获取屏幕信息
+			// 	RCSPOpWatch?.getFlashInfo().then((res) => {
+			// 		this.devScreenWidth = res.width
+			// 		this.devScreenHeight = res.height
+			// 		console.log("addBg-devScreenWidth : " + res.width);
+			// 		console.log("addBg-devScreenHeight : " + res.height);
+			// 	})
+			// },
 			onUnload() {
 				RCSPOpWatchDial?.cancelAddWatchResourseFile()
 			},
@@ -139,40 +154,42 @@
 								}
 								const transferCallback : OPLargerFileTrans.TransferTaskCallback = {
 									onError: (code : number) => {
-										this.setData({
-											transferProgressText: "传输失败，code:" + code,
-											isTransfering: false
-										})
+										self.transferProgressText = "传输失败，code:" + code
+										self.isTransfering = false
 									},
 									onStart: () => {
-										this.setData({
-											transferProgressText: "开始传输",
-											isTransfering: true
-										})
+										self.transferProgressText = "开始传输"
+										self.isTransfering = true
 									},
 									onProgress: (progress : number) => {
-										this.setData({
-											transferProgressText: "正在传输，进度:" + progress
-										})
+										self.transferProgressText = "正在传输，进度:" + progress
 									},
 									onSuccess: () => {
-										this.setData({
-											transferProgressText: "传输成功",
-											isTransfering: false
-										})
+										self.transferProgressText = "传输成功"
+										self.isTransfering = false
 									},
 									onCancel: (_code : number) => {
-										this.setData({
-											transferProgressText: "传输取消",
-											isTransfering: false
-										})
+										self.transferProgressText = "传输取消"
+										self.isTransfering = false
 									}
 								}
 								console.log("data=>", data)
-								RCSPOpWatchDial?.addWatchResourseFile(data.data1, fileName, lastModifyTime, true, transferCallback).then((res) => {
-									self.setData({
-										fileName
-									})
+								console.log("RCSPOpWatchDial=>", RCSPOpWatchDial)
+								console.log("data.data1=>", data.data1)
+								console.log("data.data1 instanceof Uint8Array=>", data.data1 instanceof Uint8Array)
+								if (!RCSPOpWatchDial) {
+									console.error("RCSPOpWatchDial 为 undefined，请检查蓝牙是否连接")
+									uni.showToast({ title: "蓝牙未连接", icon: "error" })
+									return
+								}
+								if (!data.data1) {
+									console.error("data.data1 为空，bmpConvert 可能返回 undefined，请检查图片像素尺寸是否匹配宽*高*4")
+									uni.showToast({ title: "图片数据转换失败", icon: "error" })
+									return
+								}
+								const fileDataBuffer = data.data1 instanceof ArrayBuffer ? data.data1 : (data.data1.buffer ? data.data1.buffer : data.data1)
+								RCSPOpWatchDial.addWatchResourseFile(fileDataBuffer, fileName, lastModifyTime, true, transferCallback).then((res) => {
+									self.fileName = fileName
 									if (res instanceof OPDirectoryBrowse.File) {
 										console.log("res====>", res)
 										console.log("res====>", res.getName())
@@ -182,12 +199,14 @@
 											console.log("res=>", res)
 											//设置成功
 										}).catch((error) => {
-											//失败
+											console.error("setDialCustomBackground 失败=>", error)
 										})
 
+									} else {
+										console.warn("addWatchResourseFile 返回非 File 对象=>", res)
 									}
-								}).catch((_error) => {
-
+								}).catch((error) => {
+									console.error("addWatchResourseFile 失败=>", error)
 								})
 							}
 						}
@@ -213,34 +232,26 @@
 					}
 					const transferCallback : OPLargerFileTrans.TransferTaskCallback = {
 						onError: (code : number) => {
-							this.setData({
-								transferProgressText: "传输失败，code:" + code,
-								isTransfering: false
-							})
+							self.transferProgressText = "传输失败，code:" + code
+							self.isTransfering = false
 						},
 						onStart: () => {
-							this.setData({
-								transferProgressText: "开始传输",
-								isTransfering: true
-							})
+							self.transferProgressText = "开始传输"
+							self.isTransfering = true
 						},
 						onProgress: (progress : number) => {
-							this.setData({
-								transferProgressText: "正在传输，进度:" + progress
-							})
+							self.transferProgressText = "正在传输，进度:" + progress
 						},
 						onSuccess: () => {
-							this.setData({
-								transferProgressText: "传输成功",
-								isTransfering: false
-							})
+							self.transferProgressText = "传输成功"
+							self.isTransfering = false
 
 
 							// 切换自定义背景表盘
 							setTimeout(() => {
 
 								let value = {
-									control: 1,// 设置 1 读取 
+									control: 1,// 设置 1 读取
 									style: 0, // 风格
 									styleType: 2 // 0 默认表盘 1 表盘市场  2 自定义表盘
 								}
@@ -264,19 +275,27 @@
 
 						},
 						onCancel: (_code : number) => {
-							this.setData({
-								transferProgressText: "传输取消",
-								isTransfering: false
-							})
+							self.transferProgressText = "传输取消"
+							self.isTransfering = false
 						}
 					}
 
 
 					console.log("fileName===>", fileName)
-					RCSPOpWatchDial?.addWatchResourseFile(data.data2, fileName, lastModifyTime, true, transferCallback).then((res) => {
-						self.setData({
-							fileName
-						})
+					console.log("data.data2=>", data.data2)
+					if (!RCSPOpWatchDial) {
+						console.error("RCSPOpWatchDial 为 undefined，请检查蓝牙是否连接")
+						uni.showToast({ title: "蓝牙未连接", icon: "error" })
+						return
+					}
+					if (!data.data2) {
+						console.error("data.data2 为空，bmpConvert 可能返回 undefined，请检查图片像素尺寸是否匹配宽*高*4")
+						uni.showToast({ title: "图片数据转换失败", icon: "error" })
+						return
+					}
+					const fileDataBuffer2 = data.data2 instanceof ArrayBuffer ? data.data2 : (data.data2.buffer ? data.data2.buffer : data.data2)
+					RCSPOpWatchDial.addWatchResourseFile(fileDataBuffer2, fileName, lastModifyTime, true, transferCallback).then((res) => {
+						self.fileName = fileName
 						if (res instanceof OPDirectoryBrowse.File) {
 							console.log("res====>", res)
 							console.log("res====>", res.getName())
@@ -285,12 +304,14 @@
 								console.log("res=>", res)
 								//设置成功
 							}).catch((error) => {
-								//失败
+								console.error("setDialCustomBackground 失败=>", error)
 							})
 
+						} else {
+							console.warn("addWatchResourseFile 返回非 File 对象=>", res)
 						}
-					}).catch((_error) => {
-
+					}).catch((error) => {
+						console.error("addWatchResourseFile 失败=>", error)
 					})
 				}
 
@@ -300,6 +321,15 @@
 </script>
 
 <style>
+	.page {
+		width: 100%;
+		height: 100%;
+		background-color: #F8FAFCFF;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
 	.blue-btn {
 		width: 686rpx;
 		height: 96rpx;

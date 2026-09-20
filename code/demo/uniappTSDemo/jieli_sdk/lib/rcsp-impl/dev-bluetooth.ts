@@ -186,9 +186,6 @@ namespace DeviceBluetoothInner {
 			/** 连接成功*/
 			onConnectSuccess: (device : BluetoothDevice) => {
 				//todo 要判断是不是操作的设备
-				// BLE 底层连接成功。iOS 回连失败定位关键：若此后一直等不到 onRcspInit，
-				// 说明 BLE 已连上但 RCSP 重新握手没完成，问题在协议层而非蓝牙连接本身。
-				console.log('[OTA诊断] onConnectSuccess BLE已连接 deviceId=' + device.deviceId);
 				if (this.isConnecting(device)) {
 					this._deleteConnectingDevice(device)
 					this._addConnectedDevice(device)
@@ -203,8 +200,6 @@ namespace DeviceBluetoothInner {
 			/** 连接失败*/
 			onConnectFailed: (device : BluetoothDevice, error : { errorCode : number, msg ?: string }) => {
 				//todo 要判断是不是操作的设备
-				console.log('[OTA诊断] onConnectFailed BLE连接失败 deviceId=' + device.deviceId
-					+ ' errorCode=' + error?.errorCode + ' msg=' + (error?.msg || ''));
 				if (this.isConnected(device) || this.isConnecting(device)) {
 					this._deleteConnectingDevice(device)
 					this._onConnectStatusChange(device, 3)
@@ -213,7 +208,6 @@ namespace DeviceBluetoothInner {
 			/** 连接断开*/
 			onConnectDisconnect: (device : BluetoothDevice) => {
 				//todo 要判断是不是操作的设备
-				console.log('[OTA诊断] onConnectDisconnect BLE已断开 deviceId=' + device.deviceId);
 				if (this.isConnected(device) || this.isConnecting(device)) {
 					this._deleteConnectedDevice(device)
 					this._onConnectStatusChange(device, 0)

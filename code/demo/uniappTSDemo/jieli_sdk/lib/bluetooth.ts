@@ -584,8 +584,14 @@ class ConnectImpl implements IConnect {
 		}
 		connectOption.fail = (e) => {
 			loge('连接失败，' + e.errCode, this._tag);
-			if (e.errCode == -1) {
-				// 设备已连接（可能被 veepoo SDK 连接），直接走服务发现
+			if (e.errCode == -1 || e.errCode == 10003) {
+				// errCode -1: 标准 Android/iOS 表示设备已连接(可能被 veepoo SDK 连接)。
+				// errCode 10003: 鸿蒙4.2 对已被其他 SDK 连接的设备调 createBLEConnection 返回
+				//   10003(connection fail)而非 -1(already connect)，且 getConnectedBluetoothDevices
+				//   不上报该设备，导致无法识别"已连接"状态。直接走服务发现作为最终判定：
+				//   设备确实已连接(鸿蒙)则 getBLEDeviceServices 成功；设备确实未连接(标准 Android
+				//   真连接失败)则 getBLEDeviceServices 以 10006 失败上报，不会误判。
+				console.log('[连接兼容] createBLEConnection errCode=' + e.errCode + '，尝试直接服务发现：' + device.deviceId)
 				this._negotiateMTUAndDiscover(device)
 			} else {
 				// 不能因为 isConnecting 就吞掉失败(原实现如此)：吞掉后设备永远留在 connecting

@@ -1,8 +1,8 @@
 <template>
 	<view>
 
-		<button style="margin-top: 20px;" @click="heartRateStart" :disabled="isMeasuring">开始测量</button>
-		<button style="margin-top: 20px;" @click="heartRateStop" :disabled="!isMeasuring">结束测量</button>
+		<button style="margin-top: 20px;" @click="heartRateStart">开始测量</button>
+		<button style="margin-top: 20px;" @click="heartRateStop">结束测量</button>
 
 		<view style="padding: 20px;">
 			<view>当前心率：{{heartRate}} bpm</view>

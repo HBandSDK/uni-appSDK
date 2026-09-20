@@ -6,7 +6,7 @@
 		</view>
 		<view class="bottom-content">
 			<view class="btn-white" @click="clickCancel">取消</view>
-			<view class="btn-white" @click="clickOverturn">翻转</view>
+			<!-- <view class="btn-white" @click="clickOverturn">翻转</view> -->
 			<view class="btn-white" @click="clickSelect">选取</view>
 		</view>
 	</view>
@@ -16,9 +16,16 @@
 	<canvas :style="{ width: smallDevScreenWidth + 'px', height: smallDevScreenHeight + 'px' }"
 		canvas-id="shareFrends3"></canvas>
 
-	<!-- 移除 type="2d"，改用 uni 标准 canvas，兼容 App/小程序/所有端 -->
+	<!-- #ifdef MP -->
+	<!-- 小程序端：用负值定位移出屏幕外隐藏，不影响渲染 -->
 	<canvas v-if="stats" canvas-id="myCanvas"
 		style="position:fixed;top:-9999px;left:-9999px;width:172px;height:207px;"></canvas>
+	<!-- #endif -->
+	<!-- #ifndef APP-PLUS -->
+	<!-- App/H5 端：原生 canvas 不支持极端负值定位，用 opacity:0 + pointer-events:none 隐藏 -->
+	<canvas v-if="stats" canvas-id="myCanvas"
+		style="position:fixed;top:0;left:0;width:172px;height:207px;opacity:0;pointer-events:none;z-index:-1;"></canvas>
+	<!-- #endif -->
 </template>
 
 <script lang="ts">

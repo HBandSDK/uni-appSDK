@@ -1,69 +1,78 @@
 <template>
-	<view>
-		<view class="box-btn">
-			<button @click="ReadContactPersonDataManager">读取联系人</button>
-		</view>
-		<view style="margin: 50rpx 30rpx;">
-			<view class="ItemInput">
-				<view>联系人姓名：</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="getName" type="text"
-						placeholder="姓名" /></view>
-			</view>
-			<view class="ItemInput">
-				<view>电话号码：</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="getPhone" type="text"
-						placeholder="手机号码" /></view>
-			</view>
-
-			<view class="ItemInput">
-				<view>是否设置为紧急联系人：</view>
-				<switch :checked="sos" @change="getSOS" />
-			</view>
-
-
-			<view class="ItemInput">
-				<view>被编辑联系人Id：</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="getPhoneId" type="number"
-						placeholder="添加联系人可不填" /></view>
-			</view>
-		</view>
-		<view class="box-btn">
-			<button @click="SettingContactPersonDataManager">设置联系人</button>
-		</view>
-		<view class="box-btn">
-			<button @click="editContactPerson">编辑联系人</button>
-		</view>
-		<view style="margin: 50rpx 20rpx;">
-			<view class="ItemInput">
-				<view>删除联系人ID：</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="deleteId" type="text"
-						placeholder="联系人id" /></view>
-			</view>
-		</view>
-		<view class="box-btn">
-			<button @click="deleteContactPersonDataManager">删除联系人</button>
-		</view>
-		<view style="margin: 50rpx 20rpx;">
-			<view class="ItemInput">
-				<view>需要调整的id：</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="getFromId" type="text"
-						placeholder="调整id" /></view>
-			</view>
-			<view class="ItemInput">
-				<view>目标id:</view>
-				<view><input style="background-color: aliceblue; padding: 15rpx;" @input="getToId" type="text"
-						placeholder="目标id" /></view>
-			</view>
-		</view>
-		<view class="box-btn">
-			<button @click="AdjustContactPersonDataManager">调整联系人</button>
+	<view class="box">
+		<view class="header">
+			<text class="header-title">联系人管理</text>
 		</view>
 
-		<view class="box-info">
-			<view class="info-item" v-for="(item,index) in readList" :key="index">
-				<view>手机号：{{item.phone}}</view> <text>id: {{item.id}}</text>
-				<view>姓名：{{item.name}}</view>
+		<!-- 读取按钮 -->
+		<view class="action-row">
+			<button class="btn btn-primary" @click="ReadContactPersonDataManager">读取联系人</button>
+		</view>
+
+		<!-- 设置联系人 -->
+		<view class="card">
+			<view class="card-title">设置联系人</view>
+			<view class="form-item">
+				<text class="form-label">姓名</text>
+				<input class="form-input" @input="getName" type="text" placeholder="请输入姓名" />
 			</view>
+			<view class="form-item">
+				<text class="form-label">电话号码</text>
+				<input class="form-input" @input="getPhone" type="text" placeholder="请输入手机号" />
+			</view>
+			<view class="form-item form-item-switch">
+				<text class="form-label">紧急联系人</text>
+				<switch :checked="sos" @change="getSOS" color="#00b0fb" />
+			</view>
+			<view class="form-item">
+				<text class="form-label">编辑ID</text>
+				<input class="form-input" @input="getPhoneId" type="number" placeholder="添加时不填" />
+			</view>
+			<view class="btn-group">
+				<button class="btn btn-primary" @click="SettingContactPersonDataManager">添加联系人</button>
+				<button class="btn btn-warn" @click="editContactPerson">编辑联系人</button>
+			</view>
+		</view>
+
+		<!-- 删除联系人 -->
+		<view class="card">
+			<view class="card-title">删除联系人</view>
+			<view class="form-item">
+				<text class="form-label">联系人ID</text>
+				<input class="form-input" @input="deleteId" type="text" placeholder="请输入要删除的ID" />
+			</view>
+			<button class="btn btn-danger" @click="deleteContactPersonDataManager">删除联系人</button>
+		</view>
+
+		<!-- 调整顺序 -->
+		<view class="card">
+			<view class="card-title">调整顺序</view>
+			<view class="form-item">
+				<text class="form-label">源ID</text>
+				<input class="form-input" @input="getFromId" type="text" placeholder="需要调整的ID" />
+			</view>
+			<view class="form-item">
+				<text class="form-label">目标ID</text>
+				<input class="form-input" @input="getToId" type="text" placeholder="目标位置ID" />
+			</view>
+			<button class="btn btn-primary" @click="AdjustContactPersonDataManager">调整顺序</button>
+		</view>
+
+		<!-- 联系人列表 -->
+		<view class="card" v-if="readList.length">
+			<view class="card-title">联系人列表（{{readList.length}}）</view>
+			<view class="contact-item" v-for="(item,index) in readList" :key="index">
+				<view class="contact-main">
+					<view class="contact-name-row">
+						<text class="contact-name">{{item.name}}</text>
+						<text class="contact-id">ID: {{item.id}}</text>
+					</view>
+					<text class="contact-phone">{{item.phone}}</text>
+				</view>
+			</view>
+		</view>
+		<view class="empty-tip" v-else>
+			<text>暂无联系人数据</text>
 		</view>
 	</view>
 </template>
@@ -234,20 +243,131 @@
 </script>
 
 <style>
-	.box-btn {
-		margin-bottom: 30rpx;
+	.box {
+		padding: 30rpx;
 	}
 
-	.box-info {
-		padding: 50rpx;
+	.header {
+		text-align: center;
+		padding: 20rpx 0 30rpx;
 	}
 
-	.info-item {
-		border-bottom: 1px solid #e4e4e4;
+	.header-title {
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #333;
 	}
 
-	.ItemInput {
+	.card {
+		background: #fff;
+		border-radius: 16rpx;
+		padding: 24rpx;
+		box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+		margin-bottom: 24rpx;
+	}
+
+	.card-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 20rpx;
+	}
+
+	.form-item {
 		display: flex;
-		margin: 10rpx;
+		align-items: center;
+		margin-bottom: 20rpx;
+	}
+
+	.form-item-switch {
+		justify-content: space-between;
+	}
+
+	.form-label {
+		width: 180rpx;
+		font-size: 28rpx;
+		color: #666;
+		flex-shrink: 0;
+	}
+
+	.form-input {
+		flex: 1;
+		background-color: #f5f7fa;
+		padding: 15rpx 20rpx;
+		border-radius: 8rpx;
+		font-size: 28rpx;
+	}
+
+	.btn-group {
+		display: flex;
+		gap: 20rpx;
+		margin-top: 10rpx;
+	}
+
+	.btn {
+		flex: 1;
+		border-radius: 12rpx;
+		font-size: 30rpx;
+		color: #fff;
+	}
+
+	.btn-primary {
+		background-color: #00b0fb;
+	}
+
+	.btn-warn {
+		background-color: #ffa726;
+	}
+
+	.btn-danger {
+		background-color: #ff6b6b;
+	}
+
+	.action-row {
+		margin-bottom: 24rpx;
+	}
+
+	.contact-item {
+		padding: 20rpx 0;
+		border-bottom: 1px solid #f0f0f0;
+	}
+
+	.contact-item:last-child {
+		border-bottom: none;
+	}
+
+	.contact-main {
+		display: flex;
+		flex-direction: column;
+		gap: 6rpx;
+	}
+
+	.contact-name-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.contact-name {
+		font-size: 30rpx;
+		font-weight: 500;
+		color: #333;
+	}
+
+	.contact-id {
+		font-size: 24rpx;
+		color: #999;
+	}
+
+	.contact-phone {
+		font-size: 28rpx;
+		color: #00b0fb;
+	}
+
+	.empty-tip {
+		text-align: center;
+		padding: 60rpx 0;
+		color: #999;
+		font-size: 28rpx;
 	}
 </style>

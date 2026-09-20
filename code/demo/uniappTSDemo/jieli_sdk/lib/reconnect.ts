@@ -15,9 +15,7 @@ export class Reconnect {
     this.reconnectCallback = callback;
   }
   startReconnect(timeout: number) {
-    logi("startReconnect 启动回连 超时=" + timeout + "ms，开始扫描")
     this.timeoutNumber = setTimeout(() => {
-      logi("startReconnect 回连超时(未在 " + timeout + "ms 内完成)，触发 onReconnectFailed")
       clearTimeout(this.timeoutNumber)
       this.reconnectCallback?.onReconnectFailed()
       this.reconnectOp = undefined
@@ -41,7 +39,6 @@ export class Reconnect {
     // 仅在未锁定设备连接、未完成时重启扫描。否则 connectDevice 内部的 stopScan 会被这里再次重启扫描，
     // 鸿蒙 allowDuplicatesKey 反复上报同一设备 -> 反复触发 isReconnectDevice/connectDevice -> 死循环日志爆炸崩溃
     if (!this.isFinishedReconnect() && this.connectingDevice == undefined) {
-      logi("onScanStop 扫描停止但回连未完成，重启扫描")
       this.reconnectOp?.startScanDevice();
     }
   }
@@ -77,16 +74,10 @@ export class Reconnect {
     if (!this.isFinishedReconnect()) {
       logi("onDeviceConnected : " + deviceId + " deviceId :" + this.connectingDevice?.deviceId);
       if (this.connectingDevice != null && this.connectingDevice != undefined && deviceId == this.connectingDevice.deviceId) {
-        logi("onDeviceConnected 设备匹配，回连成功，清除超时定时器")
         clearTimeout(this.timeoutNumber)
         this.reconnectCallback?.onReconnectSuccess(deviceId)
         this.isFinished = true
         this.isFindDevice = false;
-      } else {
-        // 设备连上了但 deviceId 与锁定连接的设备不一致：常见于单备份升级换 BLE 地址、
-        // 或 iOS 上 onRcspInit 上报的 deviceId 与扫描锁定时的不一致。这里不清超时，
-        // Reconnect 会一直空等到 onReconnectFailed(-112)。打日志暴露这条静默分支。
-        logi("onDeviceConnected deviceId 不匹配，忽略：上报=" + deviceId + " 锁定=" + this.connectingDevice?.deviceId + "，将继续等待直到超时")
       }
     }
   }
