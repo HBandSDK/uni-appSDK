@@ -784,6 +784,8 @@ if (veepooLogger.isLevelEnabled(veepooLogger.LEVEL.DEBUG)) { /* DEBUG 已启用 
 
 ### 9.1 密钥认证(type=1)
 
+> 本 SDK 内部调用了以下 URL：https://www.vphband.com:9001，请知悉。请务必确保这些 URL 在 App 运行时可正常访问，不要随意屏蔽、修改或替换；否则可能导致 SDK 功能异常，并可能影响后续付费授权、开放功能的正常开通与使用。建议在开发、测试及上架前提前确认这些 URL 可正常请求且符合平台合规要求。
+
 **前提**
 
 蓝牙设备已连接
