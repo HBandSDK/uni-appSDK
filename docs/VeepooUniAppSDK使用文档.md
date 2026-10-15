@@ -1190,50 +1190,59 @@ veepooFeature.veepooSendReadDailyDataManager(data);
 Progress:100,// 读取进度 1-100%
 name:"读取日常数据",
 type:5,// type 等于5表示日常数据回调
-content:[
-    {
-  // 当前时间对应的包数
-  let currentPackageNum = 126,// 对应的时间 12:30 
+content:[{
+  // 当前包的位数
+  currentPackageNum: 106,
   // 日期相关
-   let date = ''
+  date: '2026-07-09-02-30',
   //  计步相关 stepCount 步 数  amountOfExercise  运动量 distance 距离 calorie,卡路里 wear 佩戴
-  let step = ''
+  step: {
+      amountOfExercise: 0,// 运动量
+      calorie: 0,// 卡路里
+      distance: 0,// 距离
+      stepCount: 0, // 步数
+      wear: 0// 佩戴
+  },
   //  睡眠相关  6个睡眠状态
-  let sleepData = ''
-  //  脉率相关 5个脉率
-  let pulseReat = ''
-  //  心率相关  5个心率
-  let heartReat = ''
+  sleepData: [0, 0, 0, 0, 0, 255],
+  //  脉率相关 5个脉率(需要使用心率数据时，直接采用此处的数据)
+  pulseReat: [64, 0, 0, 0, 0],
   //  呼吸率相关  5个呼吸率
-  let respirationRate = ''
+  respirationRate: [255, 255, 255, 255, 255],//(付费功能) 未开启付费权限返回 []
   // 血压相关  高低压
-  let bloodPressure = ''
+  bloodPressure：{
+      bloodPressureHigh: 117, // 血压高值数据
+      bloodPressureLow: 84 // 血压低值数据
+  },
   // 5个HRV值
-  let HRVData = []
+  HRVData：[50, 0, 0, 0, 0],
   //  血氧相关  取前5个数，代表5个血氧值
-  let bloodOxygen = {
-         oxygens, //血氧
-         apneaResults, //呼吸暂停次数
-         isHypoxias, //呼吸暂停结果
-         hypoxiaTimes, //低氧时间
-         cardiacLoads, //心脏负荷
-         corrects, //血氧矫正
+  bloodOxygen: {
+         oxygens:[97, 0, 0, 0, 0], //血氧(以第一位的数据为准)
+         apneaResults:[00, 0, 0, 0, 0], //呼吸暂停次数(付费功能)
+         isHypoxias:[00, 0, 0, 0, 0], //呼吸暂停结果(付费功能)
+         hypoxiaTimes:[00, 0, 0, 0, 0], //低氧时间(付费功能)
+         cardiacLoads:[00, 0, 0, 0, 0], //心脏负荷(付费功能)
+         corrects:[00, 0, 0, 0, 0], //血氧矫正(付费功能)
   }
   //  睡眠活动相关   算法用到，应用层不做处理
-  let sleepAmountActivity = ''
+  sleepAmountActivity: [0, 0, 0, 0, 0],//(付费功能) 未开启付费权限返回 []
   //  睡眠状态量25个 算法用到，应用层不做处理
-  let sleepStatus = ''
+  sleepStatus: [0,0,0,0,....], 
   //  复位 可不做处理
-  let reset = ''
-  let g5Series = ''
+  reset： {
+      time: 32, 
+      reset: 0
+  },
+  g5Series: [0, 0, 0, 0, 0],
   //  血糖相关
-  let bloodGlucose = ''  // 注意：血糖功能类型等于 5 与 9  格式  {bloodGlucose：5.43,level:1}   level 风险等级  1 低 2 中 3 高
+  bloodGlucose: 4.09,  // 注意：血糖功能类型等于 5 与 9  格式  {bloodGlucose：5.43,level:1}   level 风险等级  1 低 2 中 3 高
    //  梅托相关
-  let meiTuo = ''
+  meiTuo: [11] //实际数据需要除以10=>1.1
   //  压力相关
-  let pressure = ''
+  pressure: [21]
   //  血液相关
-  let bloodLiquid = {
+  bloodLiquid: {
       cholesterol,//总胆固醇
       triacylglycerol,//甘油三酯
       highDensity,//高密度脂蛋白
@@ -1241,14 +1250,12 @@ content:[
       uricAcidVal,//尿酸值
   } 
   //  体温相关
-  let bodyTemperature = '' // 如果值为空，需要在特定的读取自动体温数据接口读取
+  bodyTemperature:{
+      bodyTemperature: 36.1, //体温
+      bodySurfaceTemperature: 36.0 //皮肤温度
+  } // 如果值为空，需要在特定的读取自动体温数据接口读取(这里如果没有返回数据，可以结合功能汇总、体温数据自动检测读取等相关接口进行操作)
 
-},{
-    ...
-},{
-    ...
-}
-    ]
+}]
 }
 ```
 
@@ -4681,10 +4688,10 @@ veepooFeature.veepooSendECGmeasureStartDataManager();
       hrv,// hrv
       QTC,// QTC
 
-   
+      // 以下的字段均需开启付费权限才可以使用，否则以数据均默认为 0
       diseaseRisk,//疾病风险     
       pressureIndex,//压力指数    
-      fatigueIndex,/疲劳指数    
+      fatigueIndex,//疲劳指数    
       myocarditisRisk,//心肌炎风险    
       coronaryHeartDisease,// 冠心病风险    
       angiosclerosisRisk,//血管硬化风险    
@@ -5801,7 +5808,7 @@ let drawArr = veepooFeature.veepooGetLorentzScatterPlotData(HrvData);
 // 未开启HRV付费权限
 {
     type: 52,
-    message: "没有此功能"
+    message: "无访问权限"
 }
 ```
 
@@ -5863,7 +5870,7 @@ let starIndexs = veepooFeature.veepooGetLorentzScatterPlotStarIndex(HrvData);
 // 未开启HRV付费权限
 {
     type: 52,
-    message: "没有此功能"
+    message: "无访问权限"
 }
 ```
 
@@ -5908,7 +5915,7 @@ let similarity = veepooFeature.VeepooGetLorentzScatterPlotSimilarity(HrvData);
 // 未开启HRV付费权限
 {
     type: 52,
-    message: "没有此功能"
+    message: "无访问权限"
 }
 ```
 
@@ -5950,7 +5957,7 @@ let score = veepooFeature.VeepooGetHrvHeartHealthScore(HrvData);
 // 未开启HRV付费权限
 {
     type: 52,
-    message: "没有此功能"
+    message: "无访问权限"
 }
 ```
 
