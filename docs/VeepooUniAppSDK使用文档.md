@@ -360,7 +360,9 @@ console.log("res=>",res)
 
 **前提**
 
-确保手机蓝牙开启，且蓝牙初始化完成后，蓝牙连接完成后开始调用以下的接口，否则后续的功能使用会受到影响。
+确保手机蓝牙开启，且蓝牙初始化完成后，**蓝牙连接成功**且**MTU设置成功**后调用以下的接口，否则后续部分功能使用会受到影响；
+
+关于MTU数据设置这部分，推荐将**MTU数值**设置为**512**；
 
 **接口**
 
@@ -3056,6 +3058,8 @@ veepooFeature.veepooSendBloodComponentDataManager(value);
 
 **回调**
 
+测量成功回调：
+
 
 ```js
 { 
@@ -3070,6 +3074,16 @@ veepooFeature.veepooSendBloodComponentDataManager(value);
       highDensity,// 高密度脂蛋白
       lowDensity，// 低密度脂蛋白
   }
+}
+```
+
+关闭测量回调：
+
+```js
+{
+    name: "关闭血液单项测量",
+    type: 21,
+    deviceAck:'usable'
 }
 ```
 
@@ -3131,13 +3145,13 @@ veepooFeature.veepooSendBloodComponentCheckDataManager(data);
 
 **回调**
 
-| 参数          | 类型   | 备注                 |
-| ------------- | ------ | -------------------- |
-| name          | string | 描述                 |
-| type          | number | 类型描述 21          |
-| deviceAck     | string | 操作状态             |
-| deviceControl | string | 设备控制 setup  read |
-| content       | object | 内容                 |
+| 参数          | 类型   | 备注                          |
+| ------------- | ------ | ----------------------------- |
+| name          | string | 描述                          |
+| type          | number | 类型描述 21                   |
+| deviceAck     | string | 操作状态                      |
+| deviceControl | string | 设备控制 setup 设置 read 读取 |
+| content       | object | 内容                          |
 
 content内容
 
@@ -5755,6 +5769,10 @@ veepooFeature.veepooSendPressureTestManager(data)
 
 **回调**
 
+测量成功回调：
+
+**pressure**值域范围：**[1,99]**
+
 ```typescript
 {
       name: "压力测量",
@@ -5768,7 +5786,37 @@ veepooFeature.veepooSendPressureTestManager(data)
 }
 ```
 
+关闭测量回调：
 
+```js
+{
+    name: '压力测量',
+    type: 58,
+    ack: 'usable',
+    message: '关闭压力测量'
+}
+```
+
+当前设备不支持此项功能时的回调：
+
+```js
+{
+    name: '压力测量',
+    type: 58,
+    ack: 'usable',
+    message: '当前设备不支持此项功能'
+}
+```
+
+**deviceAck枚举：**
+
+-  usable：可用的;
+
+-  deviceLowVoltage： 设备低电;
+
+-  deviceBusy： 设备忙碌 pass;
+
+-  notPassTheWearing： 佩戴不通过;
 
 ### 9.35 HRV / 洛伦兹散点图(type=52)
 

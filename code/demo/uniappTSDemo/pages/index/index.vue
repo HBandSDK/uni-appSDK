@@ -133,101 +133,35 @@
 				deviceList.forEach((item : any) => {
 					if (item.mac == e.mac) {
 						uni.setStorageSync('bleInfo', item);
-
-						// veepooBle.veepooUniAppSDKBleConnectionServicesCharacteristicsNotifyManager(item, function (result : any) {
-						// 	console.log("result=>", result)
-						// 	if (result.connection) {
-						// 		// 获取当前服务，订阅监听
-						// 		self.notifyMonitorValueChange();
-						// 		uni.showToast({
-						// 			icon: 'success',
-						// 			title: '连接成功'
-						// 		})
-
-
-						// 		setTimeout(() => {
-						// 			let data = {
-						// 				isPair: true
-						// 			}
-						// 			veepooFeature.veepooBlePasswordCheckManager(data)
-						// 			let pairedDevices = uni.getStorageSync('pairedDevices')
-						// 			console.log('配对设备信息02：', pairedDevices)
-						// 		}, 500)
-
-
-						// 		uni.navigateBack({
-						// 			delta: 1
-						// 		})
-
-						// 	}
-
-
-						// })
-
-
-
-
-						uni.openBluetoothAdapter({
-							success(res) {
-								console.log(res)
-
-
-								uni.createBLEConnection({
-									deviceId: item.deviceId,
-									success() {
-										console.log('2.自行蓝牙连接,连接成功,开始秘钥认证!')
-										veepooBle.veepooUniAppSDKHandoverServiceManager(item, function (result : any) {
-											console.log("result=>", result)
-											if (result.status) {
-												// 获取当前服务，订阅监听
-												self.notifyMonitorValueChange();
-												uni.showToast({
-													icon: 'success',
-													title: '连接成功'
-												})
-
-
-												setTimeout(() => {
-													let data = {
-														isPair: true
-													}
-													veepooFeature.veepooBlePasswordCheckManager(data)
-													let pairedDevices = uni.getStorageSync('pairedDevices')
-													// 仅安卓app、安卓小程序发起配对时需要调用此接口
-													veepooFeature.veepooAndroidPairWithPasswordVerifyManager(item, function (res) {
-														if (res.pairSuccess) {
-															// 配对成功
-															console.log('配对成功', res.pairResult)
-														} else {
-															// 配对失败/取消配对
-															// 安卓端取消配对后，安卓系统会自动断开双模连接(BLE、BT)，用户需要进行自行重连
-															console.log('配对失败', res.err)
-														}
-													})
-													// const bleDate = uni.getStorageSync('bleDate');
-													// console.log('bleDate:', bleDate);
-													console.log('配对设备信息02：', pairedDevices)
-												}, 500)
-
-
-												uni.navigateBack({
-													delta: 1
-												})
-
-											}
-										})
-									},
-									fail(err) {
-										console.log('2.自行蓝牙连接,连接失败：', err)
-										veepooFeature.veepooAndroidPairWithPasswordVerifyManager(item, function (res) {
-											console.log('配对设备BT:', res)
-										})
-									}
+						veepooBle.veepooUniAppSDKBleConnectionServicesCharacteristicsNotifyManager(item, function (result : any) {
+							console.log("result=>", result)
+							if (result.connection) {
+								// 获取当前服务，订阅监听
+								self.notifyMonitorValueChange();
+								uni.showToast({
+									icon: 'success',
+									title: '连接成功'
 								})
-							}, fail(err) {
-								console.log('打开适配器失败', err)
+
+
+								setTimeout(() => {
+									let data = {
+										isPair: true
+									}
+									veepooFeature.veepooBlePasswordCheckManager(data)
+								}, 500)
+
+
+								uni.navigateBack({
+									delta: 1
+								})
+
 							}
+
+
 						})
+
+
 					}
 				})
 			},
