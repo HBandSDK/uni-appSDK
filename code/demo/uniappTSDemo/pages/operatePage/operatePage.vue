@@ -229,6 +229,10 @@
 					path: 'reset'
 				},
 				{
+					name: '设备关机',
+					path: 'devicePowerOff'
+				},
+				{
 					name: 'android编码',
 					path: '/pages/androidCode/androidCode'
 				},
@@ -450,7 +454,9 @@
 					return
 				}
 
-
+				if (path == "devicePowerOff") {
+					veepooFeature.veepooSendDevicePowerOffDataManager()
+				}
 				// switchServices
 				// Reconnect
 

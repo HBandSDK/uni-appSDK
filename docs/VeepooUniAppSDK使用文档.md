@@ -3965,7 +3965,7 @@ veepooFeature.veepooSendFemaleInstructionsDataManager(data)
 
 
 
-### 9.22 设备管理(type=90 / 34)
+### 9.22 设备管理(type=90 / 34 / 91)
 
 #### 9.22.1 恢复出厂设置(type=90)
 
@@ -4004,7 +4004,7 @@ veepooFeature.veepooSendResettingTheDeviceDataManager()
 
 
 
-#### 9.23.2 复位(软重启)
+#### 9.22.2 复位(软重启)
 
 **前提**
 
@@ -4033,7 +4033,7 @@ veepooFeature.veepooSendResetDataManager()
 
 ------
 
-#### 9.23.3 语言设置(type=34)
+#### 9.22.3 语言设置(type=34)
 
 **前提**
 
@@ -4079,9 +4079,44 @@ veepooFeature.veepooSendLanguageSetupManager(data)
 
 ------
 
+#### 9.22.4 设备关机 (type=91)
+
+**前提**
+
+设备已连接且完成密钥认证
+
+**接口**
+
+```js
+veepooSendDevicePowerOffDataManager
+```
+
+**传入参数**
+
+无
+
+**使用示例**
+
+```js
+import { veepooFeature } from '../../miniprogram_dist/index' 
+veepooFeature.veepooSendDevicePowerOffDataManager()
+```
+
+**回调**
+
+```js
+{
+    name: "设备关机",
+    type: 91,
+    deviceAck: 'Success' // Success 关机成功 failure 关机失败
+}
+```
+
+------
 
 
-### 9.24 肤色档位设置
+
+### 9.23 肤色档位设置
 
 **前提**
 
@@ -4132,7 +4167,7 @@ G Band肤色等级对应：
 
 
 
-### 9.25 ota升级/杰理表盘传输
+### 9.24 ota升级/杰理表盘传输
 
 OTA 与表盘传输基于独立的 **`jieli_sdk`** 模块（不在 `miniprogram_dist` 内），需单独引入：
 
@@ -4179,11 +4214,11 @@ onUnload() { veepooJLOTAUnloadObserveManager() }          // 销毁
 
 
 
-### 9.26 Android编码功能(来电/短信/应用通知)
+### 9.25 Android编码功能(来电/短信/应用通知)
 
 安卓手机不具备通话功能，此接口可忽略，ios可实现以下功能
 
-#### 9.26.1 通讯录来电通知
+#### 9.25.1 通讯录来电通知
 
 **前提**
 
@@ -4205,7 +4240,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 
 
-#### 9.26.2 未知来电通知
+#### 9.25.2 未知来电通知
 
 **前提**
 
@@ -4228,7 +4263,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 
 
-#### 9.26.3 通讯录短信通知
+#### 9.25.3 通讯录短信通知
 
 **前提**
 
@@ -4251,7 +4286,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 
 
-#### 9.26.4 未知短信通知
+#### 9.25.4 未知短信通知
 
 **前提**
 
@@ -4273,7 +4308,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 
 
-#### 9.26.5 应用通知
+#### 9.25.5 应用通知
 
 **前提**
 
@@ -4321,15 +4356,15 @@ apply 应用类型
 
 ---
 
-### 9.27 表盘 / UI风格 
+### 9.26 表盘 / UI风格 
 
-#### 9.27.1 自定义表盘（UI风格）
+#### 9.26.1 自定义表盘（UI风格）
 
 蓝牙设备已连接，且设备支持自定义表盘功能
 
 
 
-##### 9.27.1.1 设置自定义背景表盘（切换自定义背景表盘）
+##### 9.26.1.1 设置自定义背景表盘（切换自定义背景表盘）
 
 **前提**
 
@@ -4365,7 +4400,7 @@ veepooFeature.veepooSendSwitchCustomBGUIDialManager(data)
 
 
 
-##### 9.27.1.2 设置自定义背景样式(type=46)
+##### 9.26.1.2 设置自定义背景样式(type=46)
 
 前提
 
@@ -4422,7 +4457,7 @@ veepooFeature.veepooSendSetupCustomBackgroundDialDataManager(value)
 
 
 
-##### 9.27.1.3 读取表盘信息(type=46)
+##### 9.26.1.3 读取表盘信息(type=46)
 
 **前提**
 
@@ -4469,7 +4504,7 @@ veepooFeature.veepooSendReadCustomBackgroundDailManager(data)
 }
 ```
 
-##### 9.27.1.4 读取表盘ui风格 (type=46)
+##### 9.26.1.4 读取表盘ui风格 (type=46)
 
 **前提**
 
@@ -4504,7 +4539,7 @@ veepooFeature.veepooSendReadUIStyleDataManager()
 }
 ```
 
-##### 9.27.1.4 获取屏幕信息
+##### 9.26.1.4 获取屏幕信息
 
 **接口**
 
@@ -4542,7 +4577,7 @@ veepooFeature.veepooSendGetCustomDialInfoManager(value, function (e: any) {})
 
 ------
 
-#### 9.27.2 获取网络表盘列表
+#### 9.26.2 获取网络表盘列表
 
 注意：uniapp小程序正式版本，需要在小程序后台配置域名才能正常获取网络列表
 
@@ -4621,9 +4656,9 @@ let data = {
 
 
 
-### 9.28 ECG测量功能(type=41 / 42)
+### 9.27 ECG测量功能(type=41 / 42)
 
-#### 9.28.1 开启测量(type=42)
+#### 9.27.1 开启测量(type=42)
 
 >  注意：疾病信息属于付费内容，如需要，需先与我司商务协商，未付费默认0
 >
@@ -4727,7 +4762,7 @@ veepooFeature.veepooSendECGmeasureStartDataManager();
 
 
 
-#### 9.28.2 关闭测量
+#### 9.27.2 关闭测量
 
 **前提**
 
@@ -4750,7 +4785,7 @@ veepooFeature.veepooSendECGmeasureStopDataManager();
 
 
 
-#### 9.28.3 读取PTT测量波形数据
+#### 9.27.3 读取PTT测量波形数据
 
 **前提**
 
@@ -4783,7 +4818,7 @@ veepooFeature.veepooSendECGmeasureStopDataManager();
 
 
 
-#### 9.28.4 读取设备ECG数据ID(type=41)
+#### 9.27.4 读取设备ECG数据ID(type=41)
 
 **前提**
 
@@ -4828,7 +4863,7 @@ veepooFeature.veepooSendReadTestSeavDataIdDataManager(data);
 
 
 
-#### 9.28.5 根据读取到的ECG ID获取数据(type=42)
+#### 9.27.5 根据读取到的ECG ID获取数据(type=42)
 
  注意：疾病信息属于付费内容，如需要，需先与我司商务协商，未付费默认0
 
@@ -4915,7 +4950,7 @@ wavefrom：[
 
 
 
-#### 9.28.6 获取ECG基本信息文本
+#### 9.27.6 获取ECG基本信息文本
 
 **前提**
 
@@ -5019,9 +5054,9 @@ console.log('ecg文本data==>', data);
 
 
 
-### 9.29 身体成分(type=32)
+### 9.28 身体成分(type=32)
 
-#### 9.29.1 身体成分检测(type=32)
+#### 9.28.1 身体成分检测(type=32)
 
 身体成分功能依赖于ECG，与ECG测量姿态一致，在手表正常佩戴情况下，进行手动测量。测量指令开启测量和设备端离线测量。
 
@@ -5102,7 +5137,7 @@ veepooFeature.veepooSendBodyCompositionTestStopDataManager();
 
 
 
-#### 9.29.2 获取身体成分数据ID(type=32)
+#### 9.28.2 获取身体成分数据ID(type=32)
 
 需要设备端进行身体成分测量，应用层再通过该接口获取测量的数据ID
 
@@ -5158,7 +5193,7 @@ veepooFeature.veepooSendReadBodyCompositionTestIdDataManager()
 
 
 
-#### 9.29.3 根据身体成分数据ID获取数据(type=32)
+#### 9.28.3 根据身体成分数据ID获取数据(type=32)
 
 **前提**
 
@@ -5215,7 +5250,7 @@ veepooFeature.veepooSendBodyCompositionIdReadDataManager(data)
 
 
 
-### 9.30 同步手环时间(type=47)
+### 9.29 同步手环时间(type=47)
 
 **前提**
 
@@ -5282,7 +5317,7 @@ veepooSendSyncTimeManager
 
 
 
-### 9.31 读取手动测量数据(type=35)
+### 9.30 读取手动测量数据(type=35)
 
 前提
 
@@ -5367,7 +5402,7 @@ veepooFeature.veepooSendManualMeasurementDataReadManager(data)
 
 
 
-### 9.32 微体检测量(type=53)
+### 9.31 微体检测量(type=53)
 
 **前提**
 
@@ -5609,9 +5644,9 @@ veepooFeature.veepooSendMicroCheckDataManager({
 | muscleMass   | 【9.0，248.0】  | 肌肉量   | proteinRate        | 【4.0，26.0】  | 蛋白质占比 |
 | proteinMass  | 【1.0，71.0】   | 蛋白质量 | basalMetabolicRate | 【25，14995】  | 基础代谢率 |
 
-### 9.33 B3 自动测量(type=54)
+### 9.32 B3 自动测量(type=54)
 
-#### 9.33.1 自动测量功能读取(type=54)
+#### 9.32.1 自动测量功能读取(type=54)
 
 **前提**
 
@@ -5668,7 +5703,7 @@ veepooFeature.veepooSendReadB3AutoTestFeatureDataManager();
 
 
 
-#### 9.33.2 自动测量功能设置(type=54)
+#### 9.32.2 自动测量功能设置(type=54)
 
 **前提**
 
@@ -5738,7 +5773,7 @@ veepooFeature.veepooSendSetupB3AutoTestFeatureDataManager({
 }
 ```
 
-### 9.34 压力测量(type=58)
+### 9.33 压力测量(type=58)
 
 **前提**
 
@@ -5818,11 +5853,11 @@ veepooFeature.veepooSendPressureTestManager(data)
 
 -  notPassTheWearing： 佩戴不通过;
 
-### 9.35 HRV / 洛伦兹散点图(type=52)
+### 9.34 HRV / 洛伦兹散点图(type=52)
 
 **注意：**传入的参数通过**日常数据(type=5)**获取，**rr50**字段，需根据 “**功能类型**” 返回  HRV数据类型字段值，如果是全天，那么那么截取全天数据，非全天，截取7小时数据
 
-#### 9.35.1 获取洛伦兹散点图数据(type=52)
+#### 9.34.1 获取洛伦兹散点图数据(type=52)
 
 **前提**
 
@@ -5864,7 +5899,7 @@ let drawArr = veepooFeature.veepooGetLorentzScatterPlotData(HrvData);
 
 
 
-#### 9.35.2 获取洛伦兹星级(type=52)
+#### 9.34.2 获取洛伦兹星级(type=52)
 
 **前提**
 
@@ -5924,7 +5959,7 @@ let starIndexs = veepooFeature.veepooGetLorentzScatterPlotStarIndex(HrvData);
 
 
 
-#### 9.35.3 获取洛伦兹相似度(type=52)
+#### 9.34.3 获取洛伦兹相似度(type=52)
 
 注意：该功能只在内部使用
 
@@ -5969,7 +6004,7 @@ let similarity = veepooFeature.VeepooGetLorentzScatterPlotSimilarity(HrvData);
 
 
 
-#### 9.35.4 获取心脏健康指数(type=52)
+#### 9.34.4 获取心脏健康指数(type=52)
 
 **前提**
 
@@ -6011,9 +6046,9 @@ let score = veepooFeature.VeepooGetHrvHeartHealthScore(HrvData);
 
 ------
 
-### 9.36 运动控制(type=60)
+### 9.35 运动控制(type=60)
 
-#### 9.36.1 设置运动控制（开启/暂停/继续/停止）
+#### 9.35.1 设置运动控制（开启/暂停/继续/停止）
 
 **前提**
 
@@ -6056,7 +6091,7 @@ veepooFeature.veepooSendSportControlDataManager(data)
 }
 ```
 
-#### 9.36.2 读取运动信息
+#### 9.35.2 读取运动信息
 
 **前提**
 
@@ -6154,9 +6189,9 @@ veepooFeature.veepooSendSportControlDataManager(data)
 
 ------
 
-### 9.37 世界时钟(type=61)
+### 9.36 世界时钟(type=61)
 
-#### 9.37.1 添加世界时钟
+#### 9.36.1 添加世界时钟
 
 **前提**
 
@@ -6215,7 +6250,7 @@ veepooFeature.veepooSendAddWorldClockDataManager(data);
 
 ------
 
-#### 9.37.2 读取世界时钟
+#### 9.36.2 读取世界时钟
 
 **前提**
 
@@ -6256,7 +6291,7 @@ veepooFeature.veepooSendReadWorldClockDataManager(data);
 
 
 
-#### 9.37.3 调整时钟顺序
+#### 9.36.3 调整时钟顺序
 
 **前提**
 
@@ -6303,7 +6338,7 @@ veepooFeature.veepooSendAdujstWorldClockDataManager(data);
 
 
 
-#### 9.37.4 删除世界时钟
+#### 9.36.4 删除世界时钟
 
 **前提**
 
@@ -6345,9 +6380,9 @@ veepooFeature.veepooSendDeleteWorldClockDataManager(data);
 
 ------
 
-### 9.38 皮肤电活动(type=62)
+### 9.37 皮肤电活动(type=62)
 
-#### 9.38.1 开启皮肤电活动
+#### 9.37.1 开启皮肤电活动
 
 **前提**
 
@@ -6428,7 +6463,7 @@ content 字段说明
 >
 > ------
 
-#### 9.38.2 关闭皮肤电活动
+#### 9.37.2 关闭皮肤电活动
 
 **前提**
 
@@ -6522,6 +6557,7 @@ veepooFeature.veepooSkinElectricalActivityCloseManager()
 |  61  | 世界时钟                       | ` veepooSendAddWorldClockDataManager` 等                 |
 |  62  | 皮肤电活动                     | ` veepooSkinElectricalActivityStartManager`等            |
 |  90  | 恢复出厂设置                   | `veepooSendResettingTheDeviceDataManager`                |
+|  91  | 设备关机                       | ` veepooSendDevicePowerOffDataManager`                   |
 | 2000 | PTT 测量开关                   | 设备主动上报                                             |
 
 ### 11. SDK设备缓存信息
