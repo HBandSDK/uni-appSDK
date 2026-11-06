@@ -29,6 +29,22 @@
 			</view>
 		</view>
 
+		<!-- 数据收集：把日常数据 / 精准睡眠的解析结果暂存在内存，供反馈给 SDK 开发者 -->
+		<view class="collect-box">
+			<view class="collect-title">数据收集（反馈给 SDK 开发）</view>
+			<view class="collect-row">
+				<text class="collect-label">开启收集</text>
+				<switch :checked="dataCollectEnabled" color="#00b0fb" @change="toggleDataCollect" />
+			</view>
+			<view class="collect-row">
+				<text class="collect-label">已收集 {{ collectedCount }} 次读取</text>
+			</view>
+			<view class="collect-btns">
+				<view class="collect-btn" @click="exportCollectedData">获取JSON</view>
+				<view class="collect-btn collect-btn-clear" @click="clearCollectedData">清空数据</view>
+			</view>
+		</view>
+
 		<!-- 未连接提示 -->
 		<!-- <view class="no-device" v-if="!connected">
 			<text>未连接设备，请先扫描连接</text>
@@ -59,7 +75,8 @@
 	// 引入方式二：
 	import {
 		veepooBle,
-		veepooFeature
+		veepooFeature,
+		veepooDataCollect
 	} from '../../common/index.js'
 
 	import {
@@ -314,6 +331,8 @@
 					path: '/pages/worldClock/worldClock'
 				}
 				],
+				dataCollectEnabled: false,
+				collectedCount: 0,
 				valData: {
 					heartRate: 'start',
 					bloodPressure: 'stop',
@@ -349,7 +368,9 @@
 				this.device = {};
 			};
 
-
+			// 同步数据收集开关与已收集条数（开关是内存态，重新进页面需要从 SDK 取）
+			this.dataCollectEnabled = veepooDataCollect.isEnabled();
+			this.refreshCollectedCount();
 
 		},
 
@@ -504,7 +525,62 @@
 				veepooFeature.veepooReadStepCalorieDistanceManager({
 					day: 0
 				});
-				// 非今天数据，步数等数据已归档，建议从日常数据中汇总计算
+			},
+
+			// ============ 数据收集（日常数据 / 精准睡眠） ============
+
+			// 开关：决定是否把解析完毕的数据写入内存
+			toggleDataCollect(e) {
+				let enabled = e.detail.value;
+				veepooDataCollect.setEnabled(enabled);
+				veepooDataCollect.exportJson(true);
+				this.dataCollectEnabled = enabled;
+				this.refreshCollectedCount();
+				uni.showToast({
+					title: enabled ? '已开启收集' : '已关闭收集',
+					icon: 'none'
+				});
+			},
+			// 刷新已收集的读取次数
+			refreshCollectedCount() {
+				this.collectedCount = veepooDataCollect.getCount();
+			},
+			// 通过回调获取收集到的 JSON 数据
+			// 这里只是示例：拿到 json 后怎么处理（存文件 、 发送 、 上传）由集成方自行决定
+			exportCollectedData() {
+				if (veepooDataCollect.getCount() === 0) {
+					uni.showToast({
+						title: '暂无可导出的数据',
+						icon: 'none'
+					});
+					return;
+				}
+				veepooDataCollect.exportData(function (err, json) {
+					if (err || !json) {
+						uni.showModal({
+							title: '获取失败',
+							content: (err && (err.errMsg || err.message)) || '未知错误',
+							showCancel: false
+						});
+						return;
+					}
+					console.log('收集数据 JSON=>', json);
+					// 集成方可以在此 存文件 、 发送 、 上传，具体集成方自行决定
+					uni.showModal({
+						title: '已获取数据',
+						content: '数据长度：' + json.length + ' 字符，已在控制台输出',
+						showCancel: false
+					});
+				});
+			},
+			// 清空内存中的收集数据
+			clearCollectedData() {
+				veepooDataCollect.clear();
+				this.refreshCollectedCount();
+				uni.showToast({
+					title: '已清空',
+					icon: 'none'
+				});
 			},
 
 		}
@@ -578,6 +654,53 @@
 	}
 
 	.page-item:active {
+		opacity: 0.6;
+	}
+
+	.collect-box {
+		background: white;
+		margin-top: 20rpx;
+		padding: 20rpx 15rpx;
+		box-sizing: border-box;
+	}
+
+	.collect-title {
+		font-size: 16px;
+		color: #333;
+		margin-bottom: 10rpx;
+	}
+
+	.collect-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		line-height: 70rpx;
+		font-size: 14px;
+		color: #666;
+	}
+
+	.collect-btns {
+		display: flex;
+		gap: 20rpx;
+		margin-top: 10rpx;
+	}
+
+	.collect-btn {
+		flex: 1;
+		background-color: #686868;
+		color: #00b0fb;
+		height: 72rpx;
+		line-height: 72rpx;
+		text-align: center;
+		font-size: 14px;
+		border-radius: 8rpx;
+	}
+
+	.collect-btn-clear {
+		color: #ffffff;
+	}
+
+	.collect-btn:active {
 		opacity: 0.6;
 	}
 

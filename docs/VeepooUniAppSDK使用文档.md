@@ -14,16 +14,17 @@
 
 SDK 提供三个模块，均从 `common/index` 导入(以给出的demo为例)：
 
-| 模块              | 作用                                                |
-| ----------------- | --------------------------------------------------- |
-| **veepooBle**     | 蓝牙连接层：扫描、连接、订阅监听、断开、连接状态等  |
-| **veepooFeature** | 功能层：读取数据、控制手环（心率/血压/睡眠/ECG 等） |
-| **veepooLogger**  | 日志层：控制 SDK 内部日志输出，便于调试             |
+| 模块                  | 作用                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| **veepooBle**         | 蓝牙连接层：扫描、连接、订阅监听、断开、连接状态等           |
+| **veepooFeature**     | 功能层：读取数据、控制手环（心率/血压/睡眠/ECG 等）          |
+| **veepooLogger**      | 日志层：控制 SDK 内部日志输出，便于调试                      |
+| **veepooDataCollect** | 数据收集层：暂存日常/睡眠解析结果，导出 JSON 用于排障（见第 8.3 节） |
 
 此外顶层导出一个 **`init(options)`** 方法，用于 SDK 初始化（见第 6 节）。
 
 ```js
-import { veepooBle, veepooFeature, veepooLogger, init } from '../../common/index'
+import { veepooBle, veepooFeature, veepooLogger,veepooDataCollect init } from '../../common/index'
 ```
 
 > **能力边界：** 本 SDK 负责蓝牙连接与协议解析。OTA 升级、表盘传输等基于杰理（Jieli）SDK 的能力，由独立的 `jieli_sdk` 模块提供，需另行引入（见对应章节）。
@@ -778,6 +779,121 @@ if (veepooLogger.isLevelEnabled(veepooLogger.LEVEL.DEBUG)) { /* DEBUG 已启用 
 ```
 
 **建议**：开发调试期用 `DEBUG`；正式上线前改回 `NONE` 或 `ERROR`，避免日志影响性能。
+
+### 8.3 数据收集与导出 veepooDataCollect
+
+用于把「日常数据」「精准睡眠」解析完成后的结果暂存在内存中，当用户反馈数据不准时，导出 JSON 反馈给 SDK 方排查。
+
+> **能力边界：** SDK 只负责采集和生成 JSON 字符串，**不做文件读写、不写本地存储、不调系统分享、不上传**。保存成文件、发送微信/邮件、上传到服务器，均由集成方自行处理。
+
+**开关（默认关闭）**
+
+```js
+import { veepooDataCollect } from '../../common/index'
+
+veepooDataCollect.isEnabled()        // 查看当前状态（默认 false）
+veepooDataCollect.setEnabled(true)   // 需要采集时显式开启
+```
+
+**接口**
+
+| 方法                           | 返回值  | 说明                                                         |
+| ------------------------------ | ------- | ------------------------------------------------------------ |
+| `setEnabled(bool)`             | 无      | 开关，决定是否把解析结果写入内存                             |
+| `isEnabled()`                  | boolean | 当前开关状态                                                 |
+| `getCount()`                   | number  | 已收集的读取次数                                             |
+| `clear()`                      | 无      | 清空内存中的全部记录                                         |
+| `exportData(callback, pretty)` | 无      | 回调形式交付 JSON，`callback(err, jsonString)`，传 `false` 输出紧凑单行 |
+| `exportJson(pretty)`           | string  | 同步返回 JSON 字符串；**默认美化输出**，传 `false` 输出紧凑单行 |
+
+> 每次调用 `exportData` / `exportJson` 都是导出**当前内存中的全部记录**，不缓存、不做增量；记录会持续累积，只有 `clear()` 才归零。
+
+**使用示例**
+
+```js
+// (1) 开启采集（默认关闭，必须显式开启）
+veepooDataCollect.setEnabled(true)
+
+// (2) 正常读取数据
+
+// 获取日常数据
+veepooFeature.veepooSendReadDailyDataManager({ day: 0, package: 0 })
+
+// 获取睡眠数据
+veepooFeature.veepooSendReadPreciseSleepManager({ day: 0 })
+
+// (3) 用户反馈问题时，导出 JSON
+veepooDataCollect.getCount()      // 先判断是否已收集到数据
+veepooDataCollect.exportData((err, json) => {
+  if (err || !json) return
+  // 集成方在此接入自己的逻辑：写文件 / 发邮件 / 上传服务器
+  console.log('收集数据 JSON=>', json)
+
+  // (4) 建议在「确认送达」后再清空，避免上传失败时数据丢失
+  uni.request({
+    url: '集成方的接收地址',
+    method: 'POST',
+    header: { 'content-type': 'application/json' },
+    data: json,
+    success() {
+      veepooDataCollect.clear()
+    },
+    fail() {
+      uni.showToast({ title: '上传失败，可重试', icon: 'none' })
+    }
+  })
+})
+```
+
+**导出数据结构示例**
+
+```json
+{
+  "exportTime": "2026-11-04 20:01:00.021",
+  "device": { "mac": "AA:BB:CC:DD:EE:FF", "version": "3.0.4-5902" },
+  "total": 2,
+  "records": [
+    {
+      "seq": 1,
+      "time": "2026-11-04 20:01:00.015",
+      "type": "daily",
+      "packageIndex": 0,
+      "data": { "name": "读取日常数据", "type": 5, "Progress": 100, "content": [ ... ] }
+    },
+    {
+      "seq": 2,
+      "time": "2026-11-04 20:01:05.100",
+      "type": "sleep",
+      "readDay": "今天",
+      "data": { "name": "精准睡眠数据", "type": 4, "content": [ ... ] }
+    }
+  ]
+}
+```
+
+| 字段                                                | 说明                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `exportTime`                                        | 导出时间                                                     |
+| `device.mac` / `device.version`                     | **导出时刻**当前连接的设备 MAC 与固件版本（密钥成功认证后才有值）。中途切换过设备时，历史记录也会显示为当前设备，如需准确归属请导出前先 `clear()` |
+| `type`                                              | `daily` 日常数据 / `sleep` 精准睡眠                          |
+| `packageIndex`                                      | 仅日常数据，对应读取时传入的 `package`                       |
+| `readDay`                                           | 仅睡眠，对应 `今天 / 昨天 / 前天`                            |
+| `data`                                              | 解析结果与业务回调一致；日志的 `content` 额外携带每包原始报文 |
+| `content[].dailyRawData` / `content[].sleepRawData` | 只出现在日志数据中，业务回调不含这两个字段                   |
+| `content[].rawPackets`                              | 只出现在日志数据中，业务回调不含这个字段                     |
+
+**注意事项**
+
+1. **默认关闭**：不调用 `setEnabled(true)` 时完全不采集，`getCount()` 恒为 0。
+2. **开关不持久化**：属于内存态，杀掉进程或重启后恢复为默认（关闭）。
+3. **内存占用**：记录含原始报文，单日日常数据可能有几百 KB；导出时 `JSON.stringify` 会临时生成同等大小的字符串，属于峰值时刻（回调结束后字符串可被回收）。记录本身在确认送达后调用 `clear()` 即可释放。
+4. **必须使用最新产物**：该能力为`v1.1.0`版本新增，客户端工程里的 `common/index.js` 需替换为最新构建产物，否则 `veepooDataCollect` 为 `undefined`。
+5. **关闭开关不会清空已有记录**：`setEnabled(false)` 只是停止新增，已收集的记录仍留在内存中，需要调用 `clear()` 才释放。
+6. **导出不会自动清空**：反复点击 `获取JSON(exportData)` 拿到的都是当前全部记录，内容一致；不要在导出后立即清空，建议确认送达后再清。
+
+**排查所需信息（建议一并向用户收集）**
+
+只有原始数据还不够，建议同时记录：用户反馈的具体现象（哪个指标不准、显示值 vs 期望值）、截图、App 版本（集成方使用SDK的具体版本号）、手机机型与系统版本、操作时间点。
 
 ## 9.**功能接口模块 veepooFeature**
 
@@ -7089,6 +7205,7 @@ veepooUniAppSDKUpdateDeviceDialServiceManager               // 切到表盘服�
 
 | 版本 | 日期       | 说明                                                         |
 | ---- | ---------- | ------------------------------------------------------------ |
+| v3   | 2026-11-04 | 新增 `veepooDataCollect` 数据收集模块：开关控制采集日常/睡眠解析结果，通过回调导出 JSON，仅内存保存、不落盘不上传（详见 8.3）；同步更新 SDK 概述模块表与导入示例 |
 | v2   | 2026-08-15 | 文档重构：新增数据接收模型、Quick Start、init、type 总表、错误枚举总表；修复接口名示例错误；定制项目移入附录；修复type值重复问题 |
 | v1   | —          | 初版                                                         |
 
