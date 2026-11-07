@@ -533,7 +533,6 @@
 			toggleDataCollect(e) {
 				let enabled = e.detail.value;
 				veepooDataCollect.setEnabled(enabled);
-				veepooDataCollect.exportJson(true);
 				this.dataCollectEnabled = enabled;
 				this.refreshCollectedCount();
 				uni.showToast({

@@ -90,7 +90,7 @@ iOS：
 将 `lib/vp_sdk/index.js` 放入 uni-app 项目（demo 中对应 `code/demo/uniappTSDemo/common/index.js`），然后引入：
 
 ```js
-import { veepooBle, veepooFeature, veepooLogger, init } from '../../common/index.js'
+import { veepooBle, veepooFeature, veepooLogger, veepooDataCollect, init } from '../../common/index.js'
 ```
 
 > 引入路径按 SDK 文件在项目中的实际位置调整。
@@ -187,7 +187,7 @@ export default {
 - 如自行封装蓝牙连接，连接成功且 MTU 设置成功后，必须调用 `veepooUniAppSDKHandoverServiceManager`，详见使用文档 7.4 节。
 - demo 在 `App.vue` 的 `onLaunch` 中初始化杰理 SDK（`new veepooJLBle().init()`）并设置日志级别；基础蓝牙功能可不引入，使用 OTA、表盘传输时需引入 `lib/jieli_sdk`，详见使用文档 9.25 节。
 
-完整初始化、接口参数与回调结构，请阅读 **[VeepooUniAppSDK 使用文档](docs/VeepooUniAppSDK使用文档.md)**。其中第 3 节「数据接收模型」为对接必读，第 10 节为 `type` 回调对照总表。
+完整初始化、接口参数与回调结构，请阅读 **[VeepooUniAppSDK 使用文档](docs/VeepooUniAppSDK使用文档.md)**。其中第 3 节「数据接收模型」为对接必读，第 10 节为 `type` 回调对照总表，第 12 章「数据收集与导出模块」用于排查数据问题。
 
 ## 3. 功能概览
 
@@ -200,7 +200,7 @@ export default {
 | 运动         | 运动模式、运动数据、运动控制、世界时钟                                                               | 9.13、9.35、9.36      |
 | 表盘与 OTA   | 自定义/网络表盘、UI 风格、杰理 OTA 与表盘传输（仅杰理设备）                                          | 9.24、9.26            |
 | 定制项目     | JH58、ZT163、YM28PRO、4G 服务等                                                                       | 文档附录 A            |
-| 日志         | 控制 SDK 内部日志输出，便于调试                                                                      | 文档第 8 章           |
+| 日志与数据收集 | 控制 SDK 内部日志输出便于调试；暂存日常/睡眠解析结果并导出 JSON 用于排障（数据收集目前仅支持这两类） | 文档第 8 章、第 12 章 |
 
 各功能的调用方式、参数与返回结构见使用文档对应章节，demo 中也提供了主要功能的示例页面。
 
@@ -242,13 +242,14 @@ export default {
 | OTA、表盘传输不可用        | 该能力仅支持杰理类型设备，且需引入 `lib/jieli_sdk`           |
 | 页面退出后仍占用蓝牙资源   | 离开页面时调用 `veepooUniAppSDKStopSearchBleManager`，必要时断开连接 |
 | OTA 升级后设备无法开机     | 确认 ufw 固件与当前项目/设备匹配，禁止跨项目或跨设备号升级   |
+| 日常/睡眠数据与设备显示不符 | 开启 `veepooDataCollect` 收集解析结果，导出 JSON 反馈给 SDK 方分析（详见文档第 12 章） |
 
 ## 7. 当前版本
 
 | 项目                     | 版本       | 发布日期  |
 | ------------------------ | ---------- | --------- |
-| UniAppSDK                | **V1.1.0** | 2026/11/6 |
-| VeepooUniAppSDK 使用文档 | **V2.0.5** | 2026/11/6 |
+| UniAppSDK                | **V1.1.1** | 2026/11/7 |
+| VeepooUniAppSDK 使用文档 | **V2.1.0** | 2026/11/7 |
 
 ## 8. 许可证
 
