@@ -329,6 +329,10 @@
 				{
 					name: '世界时钟',
 					path: '/pages/worldClock/worldClock'
+				},
+				{
+					name: '自定义指令',
+					path: '/pages/customCommand/customCommand'
 				}
 				],
 				dataCollectEnabled: false,
