@@ -4402,13 +4402,19 @@ onUnload() { veepooJLOTAUnloadObserveManager() }          // 销毁
 
 ### 9.25 Android编码功能(来电/短信/应用通知)
 
-安卓手机不具备通话功能，此接口可忽略，ios可实现以下功能
+**功能说明**
+
+本模块把手机侧的**来电、短信、应用通知**编码后下发到手环，由手环提醒展示。SDK 只负责「编码 + 下发」，**不负责采集**，也无法主动监听手机系统事件。
+
+接入方式：客户先通过 **uni 提供的第三方插件**（如 Android 通知监听、通话状态监听插件）获取推送信息，并由插件申请通知使用权、通话状态、短信读取等系统权限；再按下方接口格式推送到设备。
+
+> 插件选型、权限申请与信息采集均由客户自行实现；长文本由 SDK 自动分包下发，无需自行分包。
 
 #### 9.25.1 通讯录来电通知
 
 **前提**
 
-设备已连接，且支持通话功能
+设备已连接，且设备支持消息提醒功能
 
 **使用示例**
 
@@ -4430,7 +4436,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 **前提**
 
-设备已连接，且设备支持通话功能
+设备已连接，且设备支持消息提醒功能
 
 未知来电是指在手机通讯录没有存储该手机号码，调用接口前需要查看一遍通讯录是否存储有该手机号，如果有存储，则需要将存储的名称一起带上
 
@@ -4453,7 +4459,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 **前提**
 
-设备已连接，且支持通话功能
+设备已连接，且设备支持消息提醒功能
 
 **使用示例**
 
@@ -4476,7 +4482,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 **前提**
 
-设备已连接，且支持通话功能
+设备已连接，且设备支持消息提醒功能
 
 **使用示例**
 
@@ -4498,7 +4504,7 @@ veepooFeature.veepooSendAndroidCodeDataManager(data);
 
 **前提**
 
-设备已连接，且支持通话功能
+设备已连接，且设备支持消息提醒功能
 
 **使用示例**
 
@@ -4512,7 +4518,7 @@ let data = {
 veepooFeature.veepooSendAndroidCodeDataManager(data);
 ```
 
-apply 应用类型
+**apply 应用类型**（两位十六进制字符串，如 `'02'` 表示微信；也可传对应的十进制数值）
 
 ```js
  00 来电
@@ -6751,7 +6757,7 @@ veepooFeature.veepooSkinElectricalActivityCloseManager()
 
 ### 
 
-### 10. type 回调对照总表（权威）
+## 10. type 回调对照总表（权威）
 
 全局监听 `veepooUniAppSDKNotifyMonitorValueChange` 中按 `res.type` 路由。下表为完整对照：
 
@@ -6809,7 +6815,7 @@ veepooFeature.veepooSkinElectricalActivityCloseManager()
 |  91  | 设备关机                       | ` veepooSendDevicePowerOffDataManager`                   |
 | 2000 | PTT 测量开关                   | 设备主动上报                                             |
 
-### 11. SDK设备缓存信息
+## 11. SDK设备缓存信息
 
 | 缓存名称            | 类型    | 备注                     |
 | ------------------- | ------- | ------------------------ |
@@ -6968,119 +6974,13 @@ veepooDataCollect.exportData((err, json) => {
 
 > 反馈时建议一并提供：具体现象（哪个指标、显示值 vs 期望值）、截图、App 版本、手机机型与系统版本、操作时间点。开启采集不影响业务回调，只是把解析结果追加到内存。
 
-## 13. 自定义数据接口（0x04）
+## 附录A：定制项目接口
 
-面向客户定制功能。SDK 只做「格式校验 + 通道搭桥」，**不解析自定义内容**；字段含义、字节序、校验方式由客户与固件约定，另出独立协议文档。
-
-### 13.1 指令格式
-
-| 方向 | 格式 |
-| ---- | ---- |
-| App → 设备 | `0x04`（固定包头）+ 协议编号（1 字节）+ 自定义内容，写入标准指令通道 |
-| 设备 → App | 同格式，从标准数据通道上报 |
-
-协议编号由 veepoo 统一分配，一个客户/一套定制协议对应一个编号。
-
-### 13.2 接口
-
-```js
-veepooBle.veepooUniAppSDKSendCustomDataFramesManager(dataArray, callback)
-```
-
-| 参数 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| `dataArray` | `Array<Array<String>>` | 二维十六进制字符串数组，每个子数组是一帧完整指令（含 `0x04` 包头） |
-| `callback` | `Function` | 写入结果回调，统一为 `{ success, code, errMsg, total?, failIndex? }` |
-
-**回调结构**：
-
-| 字段 | 说明 |
-| ---- | ---- |
-| `success` | 是否全部写入成功 |
-| `code` | 数值结果码：`0` Success / `1` InvalidData / `2` TooLong / `3` NotConnected / `4` InDFUMode |
-| `codeName` | 结果码名称，如 `Success`、`TooLong` |
-| `codeDesc` | 结果码中文描述，可直接提示用户 |
-| `errMsg` | 具体失败原因（含帧号）；成功时为空字符串 |
-| `total` | 本次帧数 |
-| `failIndex` | 失败帧下标（从 0 开始），仅失败时返回 |
-
-单帧与多帧结构一致：单帧写完即回调；多帧逐帧写入，任一帧失败立即中断。
-
-### 13.3 校验规则
-
-SDK 在写入前依次校验，任一项不通过即回调错误，**不会产生任何蓝牙数据**：
-
-| 顺序 | 校验项 | 失败返回 |
-| ---- | ---- | ---- |
-| 0 | 设备已连接 | `code: 3`（NotConnected） |
-| 0.1 | 不处于 DFU / 资源传输模式 | `code: 4`（InDFUMode） |
-| 1 | `dataArray` 为非空数组 | `code: 1`（InvalidData），`errMsg` 说明列表为空 |
-| 2 | 每帧为非空数组 | `code: 1`，附 `failIndex` |
-| 3 | 每帧长度 ≥ 3（`0x04` + 2 字节协议编号） | `code: 1`，附 `failIndex` |
-| 4 | 每帧首字节为 `0x04` | `code: 1`，附 `failIndex` |
-| 5 | 中科平台每帧 ≤ 20 字节 | `code: 2`（TooLong），附 `failIndex` |
-
-> `failIndex` 为帧在 `dataArray` 中的下标，从 0 开始。
-
-第 4 项用于防止把标准协议指令（如 `a1`、`df`）误当自定义指令下发导致设备异常。
-
-### 13.4 单包长度限制
-
-SDK 对单帧长度的处理分平台，**推荐先通过 `veepooUniAppSDKGetPacketSizeManager` 获取单包可写长度（`MTU - 3`）再分包，取不到时按 20 字节兜底**。
-
-- **中科平台（芯片系列 3/4）**：单帧超过 **20 字节**，写入前直接返回 `code: 2`（TooLong），整批指令都不会发出。
-- **其他平台**：可超过 20 字节，通常在设备能力范围内可正常下发，超出实际能力时不保证成功。
-- **多条下发**：SDK 逐帧写入，帧间隔 30ms，写入时不再叠加内置延时；**任一帧写入失败立即中断**，返回 `success: false` 与 `failIndex`；全部写完才回调 `success: true`。
-
-**平台差异与中科平台限制**
-
-| 项目 | 中科平台（芯片系列 3/4） | 其他平台 |
-| ---- | ---- | ---- |
-| 单帧上限 | **20 字节** | 取决于链路单包长度（`veepooUniAppSDKGetPacketSizeManager`） |
-| 超过上限 | 写入前直接返回 `TooLong`（code 2），整批指令都不会发出 | 满足连接、认证等前提后一般可正常下发；超出设备实际能力时不保证成功 |
-| 分包要求 | 必须由自定义协议自行拆分（如 `总包 / 当前包` 字段），固件按字段重组 | 建议同样按协议帧头自行分包 |
-
-> 中科平台不支持任何超过 20 字节的单帧，建议所有平台统一按 20 字节组帧，避免同一套协议在不同芯片上需要两套分包逻辑。
-
-### 13.5 使用示例
-
-```js
-// 以 0x0401 礼拜提醒为例：设置 7 天数据，按每帧 ≤20 字节拆分
-const frames = [
-  ['04', '01', '01', '01', '01', /* ... */], // 总包 01，当前包 01
-  ['04', '01', '01', '02', '01', /* ... */]  // 总包 01，当前包 02
-]
-
-veepooBle.veepooUniAppSDKSendCustomDataFramesManager(frames, function (res) {
-  if (!res || !res.success) {
-    console.log('下发失败：', res && res.code, res && res.errMsg, '失败帧：', res && res.failIndex)
-    return
-  }
-  console.log('下发完成，共', res.total, '帧')
-})
-```
-
-### 13.6 注意事项
-
-1. **设备上报的 `0x04` 数据可直接接收**：通过 `veepooUniAppSDKNotifyMonitorValueChange` 订阅，回调值为十六进制字符串数组（含 `0x04` 包头），需按 `e[1]` 协议编号分发、按帧头中的 `总包 / 当前包` 自行重组；未注册监听时数据会被直接丢弃，不会缓存。
-   ECG / ADC 通道沿用原来的 `veepooUniAppSDKNotifyECGValueChange`（与 `veepooUniAppSDKNotifyADCValueChange` 等价，二者订阅同一特征值 `F0020002`）即可同时收到 ECG 波形、ADC 波形和 `0x04` 自定义数据；波形为对象，自定义数据为数组，需先判断 `Array.isArray(e) && e[0] === '04'`。两个接口不可同时订阅，后订阅的会覆盖先订阅的。
-2. **需先连接并通过 A1 认证**：未连接时返回 `{ success: false, code: 3, codeName: 'NotConnected' }`。
-3. **回调仅代表写入结果**：不代表设备已处理成功，业务应答请按客户协议另行读取。
-4. **长包判断依赖芯片系列**：该值来自连接后的「手环功能汇总」第 3 包，建议在功能汇总完成后再下发定制指令。
-5. **内容完全由客户负责**：SDK 不解析、不校验自定义内容，CRC 等校验逻辑由客户协议自行实现。
-6. **不要下发标准协议指令**：本接口只放行 `0x04` 开头的数据，标准功能请调用对应的 SDK 接口。
-7. **短帧会被补零**：帧长不足单包长度时，SDK 会补齐 `0x00` 再发出。客户协议请按帧头中的长度字段解析，不要按包尾解析，否则可能把补齐的 `00` 当成有效内容。
-8. **写入失败不一定可见**：当前写入未使用带应答模式，Android 上无 ACK，丢包或超长被底层丢弃时回调仍可能显示成功。
-9. **DFU / 资源传输模式已支持拦截**：进入 OTA 或表盘传输前调用 `veepooUniAppSDKSetCustomDataDfuMode(true)`，期间下发会返回 `code: 4`（InDFUMode）；结束后调用 `false` 恢复。
-10. **SDK 无超时与重试机制**：回调只表示写入完成，SDK 不等待设备应答、不做超时判断与自动重试。建议业务侧自行加超时兜底，例如发起后 **10 秒内未收到对应协议的应答即按失败处理**；重试前请先确认设备是否已执行，避免重复下发。
-
-### 附录A：定制项目接口
-
-#### A.1 JH58定制项目动态血压相关接口(type=55)
+### A.1 JH58定制项目动态血压相关接口(type=55)
 
 
 
-##### A.1.1 读取测量模式开关状态(type=55)
+#### A.1.1 读取测量模式开关状态(type=55)
 
 **前提**
 
@@ -7120,7 +7020,7 @@ veepooFeature.veepooReadTestModeSwitchStateDataManager();
 
 
 
-##### A.1.2 设置测量模式开关状态(type=55)
+#### A.1.2 设置测量模式开关状态(type=55)
 
 **前提**
 
@@ -7164,7 +7064,7 @@ veepooFeature.veepooSetupTestModeOneSwitchStateDataManager(data);
 
 
 
-##### A.1.3 读取PPG原始数据(type=55)
+#### A.1.3 读取PPG原始数据(type=55)
 
 **前提**
 
@@ -7225,7 +7125,7 @@ veepooFeature.veepooReadTestModeOrigDataManager(data);
 
 
 
-#### A.2 ZT163常灭屏功能(type=56)
+### A.2 ZT163常灭屏功能(type=56)
 
 **前提**
 
@@ -7268,9 +7168,9 @@ veepooFeature.veepooSetupZT163ScreenKillFunctionManager(data);
 
 
 
-#### A.3 4G设备(type=57)
+### A.3 4G设备(type=57)
 
-##### A.3.1 读取4G设备Service信息(type=57)
+#### A.3.1 读取4G设备Service信息(type=57)
 
 **前提**
 
@@ -7319,7 +7219,7 @@ veepooFeature.veepooRead4GServiceDataManager();
 
 
 
-##### A.3.2 设置4G设备Service信息(type=57)
+#### A.3.2 设置4G设备Service信息(type=57)
 
 **前提**
 
@@ -7380,9 +7280,9 @@ veepooFeature.veepooSetup4GServiceInfoManager({
 
 
 
-#### A.4 YM28PRO项目相关接口(type=59)
+### A.4 YM28PRO项目相关接口(type=59)
 
-##### A.4.1 读取设备当前数据情况(type=59)
+#### A.4.1 读取设备当前数据情况(type=59)
 
 **前提**
 
@@ -7435,7 +7335,7 @@ veepooFeature.veepooSetupSendYM28PROCommandManager(data);
 
 
 
-##### A.4.2 下发数据(type=59)
+#### A.4.2 下发数据(type=59)
 
 **前提**
 
@@ -7495,7 +7395,7 @@ veepooFeature.veepooSetupSendYM28PROCommandManager(data);
 
 
 
-##### A.4.3 读取SN码(type=59)
+#### A.4.3 读取SN码(type=59)
 
 **前提**
 
@@ -7535,7 +7435,7 @@ veepooFeature.veepooSetupSendYM28PROCommandManager(data);
  }
 ```
 
-### 附录B：接口命名与拼写注意事项
+## 附录B：接口命名与拼写注意事项
 
 SDK 中部分接口名存在**既定的不规整拼写**，导出名已固定，**请原样复制使用，勿自行"修正"**，否则会报 `undefined is not a function`：
 
@@ -7549,7 +7449,7 @@ SDK 中部分接口名存在**既定的不规整拼写**，导出名已固定，
 | `veepooReadAutoTemperatureMeasurementDataManager` | 注意带 `Manager` 后缀          |
 | `veepooSendSettingWeatherForecastInfoManager`     | 注意带 `Manager` 后缀          |
 
-#### 底层封装接口完整列表（一般无需直接调用）
+### 底层封装接口完整列表（一般无需直接调用）
 
 下列接口已被"一站式"接口封装集成，仅在自行组装蓝牙流程时使用：
 
@@ -7573,7 +7473,7 @@ veepooUniAppSDKUpdateECGServiceManager                      // 切到 ECG 服务
 veepooUniAppSDKUpdateDeviceDialServiceManager               // 切到表盘服务
 ```
 
-#### 状态与多订阅 API（调试/重连场景）
+### 状态与多订阅 API（调试/重连场景）
 
 | 接口                                                         | 作用                                                         |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -7583,7 +7483,7 @@ veepooUniAppSDKUpdateDeviceDialServiceManager               // 切到表盘服�
 | `removeBleNotificationListener(listenerId)`                  | 移除监听器                                                   |
 | `addConnectionStateListener(cb)` / `removeConnectionStateListener(cb)` | 连接状态多订阅                                               |
 
-### 附录C：版本与更新记录
+## 附录C：版本与更新记录
 
 | 版本 | 日期       | 说明                                                         |
 | ---- | ---------- | ------------------------------------------------------------ |
