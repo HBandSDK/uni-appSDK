@@ -53,7 +53,7 @@
 				// dataType 数据类型   0 血压 1 心率 2 血糖 3 压力 4 血氧 5 体温 6 梅拖 7 hrv 8 血液成分 9 微体检 10 情绪 11 疲劳度 12 皮电
 				veepooFeature.veepooSendManualMeasurementDataReadManager({
 					timestamp: timestampInSeconds,
-					dataType: 0
+					dataType: 9
 				});
 
 			}

@@ -40,8 +40,8 @@
 		</view>
 		<view class="box-item">
 			<view>联系人：</view>
-			<view><input style="background-color: aliceblue; padding: 10rpx 15rpx;" :value="name"
-					@input="inputValue3" type="text" placeholder="名称" /></view>
+			<view><input style="background-color: aliceblue; padding: 10rpx 15rpx;" :value="name" @input="inputValue3"
+					type="text" placeholder="名称" /></view>
 		</view>
 		<view class="box-item">
 			<view>发送的消息：</view>
@@ -75,6 +75,7 @@
 		veepooBle,
 		veepooFeature
 	} from '../../common/index.js'
+
 	export default {
 		data() {
 			return {

@@ -10,12 +10,13 @@
 
 
 		</view>
+		<text>注意：传输完成后需刷新表盘列表，才能正常上传表盘</text>
 		<view class="get-custom-dial" @click="clickStartTransferDialFile"><button
 				style="margin: 30rpx  auto;background-color: white;">开始传输</button></view>
 
 		<text>{{transferProgressText}}</text>
 
-		<!-- <text>注意：传输完成后需刷新表盘列表，才能正常删除表盘</text> -->
+
 
 
 
@@ -145,7 +146,7 @@
 				// dialInfo: { "dataAddress": dialInfo.dataAddress, "writeDataLength": dialInfo.writeDataLength, "binProtocol": dialInfo.binProtocol, "dataUseType": dialInfo.dataUseType, "dialShape": dialInfo.dialShape, "ImageId": dialInfo.ImageId },
 				console.log('这个时获取的dailInfo==>', dialInfo)
 				let data = {
-					version: "03.95.05.08-6748",
+					version: "02.21.04.07-5983",
 					// version: "11.95.01.00-6702",
 					// version: "01.05.02.00-5376",
 					// version: "01.05.02.00-5840",
@@ -162,14 +163,21 @@
 					// 	"dialShape": 53,
 					// 	"ImageId": 0
 					// },
-					dialInfo: {
-						"dataAddress": 0,
-						"writeDataLength": 5907609,
-						"binProtocol": 2,
-						"dataUseType": 1,
-						"dialShape": 61,
-						"ImageId": 0
-					},
+					// dialInfo: {
+					// 	// "dataAddress": 0,
+					// 	// "writeDataLength": 5907609,
+					// 	// "binProtocol": 2,
+					// 	// "dataUseType": 1,
+					// 	// "dialShape": 61,
+					// 	// "ImageId": 0
+					// 	"dataAddress": 0,
+					// 	"writeDataLength": 1019837,
+					// 	"binProtocol": 2,
+					// 	"dataUseType": 1,
+					// 	"dialShape": 67,
+					// 	"ImageId": 0
+					// },
+					dialInfo: this.dialInfo,
 					pageIndex: this.getIndex, // 当前页数
 					pageSize: 24, // 数据条数
 				}
@@ -198,6 +206,8 @@
 			// 杰理认证
 			setJLVerify() {
 				let self = this;
+				// 认证前确保 AE02 通知监听处于已注册状态（init 幂等，小程序端会重新注册）
+				BleDataHandler.init()
 				let info = uni.getStorageSync('bleInfo')
 				// 杰里设备认证
 				let device = info;
@@ -208,8 +218,11 @@
 			// 开始传输
 			clickStartTransferDialFile() {
 				let self = this;
+				// 传输前再次确保收包监听已注册，避免断连/重连后 SDK 清空监听导致 RCSP 收不到回包
+				BleDataHandler.init()
 				let fileData = this.fileData;
-				if (fileData.length <= 0) {
+				// fileData 初始为 {}，没有 length；必须校验 dialData 是否已读取成功
+				if (!fileData || !fileData.dialData || fileData.dialData.length <= 0) {
 					uni.showToast({
 						title: "请先下载表盘",
 						icon: "none"
@@ -252,19 +265,34 @@
 						console.log("result删除表盘=>", result)
 						// 删除完成，传输数据
 						veepooJLAddDialTransferStartManager(fileData, function(result) {
-							console.log("传输进度result=>", result);
-							self.transferProgressText = result.transferProgressText
+							self._handleTransferResult(result)
 							deteleState = false
 							deteleFile = {}
 						})
 					})
 				} else {
 					veepooJLAddDialTransferStartManager(fileData, function(result) {
-						console.log("传输进度result=>", result);
-						self.transferProgressText = result.transferProgressText
+						self._handleTransferResult(result)
 					})
 				}
 
+			},
+
+			// 传输回调统一处理：错误要显示出来，不能只停在控制台
+			_handleTransferResult(result) {
+				console.log("传输进度result=>", result);
+				if (!result) {
+					return
+				}
+				if (result.error) {
+					this.transferProgressText = result.error
+					uni.showToast({
+						title: result.error,
+						icon: "none"
+					})
+					return
+				}
+				this.transferProgressText = result.transferProgressText
 			},
 
 			downloadDial(name) {
@@ -299,6 +327,13 @@
 							}
 							veepooJLGetFileDataManager(tempFilePaths, function(fileResult) {
 								console.log("获取文件成功==>", fileResult);
+								if (fileResult && fileResult.error) {
+									uni.showToast({
+										title: fileResult.error,
+										icon: "none"
+									})
+									return
+								}
 								self.fileData = fileResult
 							})
 
@@ -330,26 +365,6 @@
 						console.log('文件下载失败：', err);
 					}
 				})
-			},
-
-
-			readDownLoadData() {
-				let self = this;
-				let dialStorageList = uni.getStorageSync("dialStorageList");
-				console.log("dialStorageList==>", dialStorageList);
-				const fs = uni.getFileSystemManager()
-				fs.readFile({
-					filePath: `${dialStorageList[0].path}`,
-					success(res) {
-						console.log(res);
-						const uint8Array = new Uint8Array(res.data); // 将ArrayBuffer转换为Uint8Array
-						console.log('Uint8Array 数据:', uint8Array);
-					},
-					fail(res) {
-						console.error(res)
-					}
-				})
-
 			},
 
 

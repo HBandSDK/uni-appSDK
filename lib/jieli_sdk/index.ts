@@ -30,8 +30,122 @@ import { BleDataHandler, BleSendDataHandler } from './lib/ble-data-handler';
 export const veepooJLBluetoothConnectionManager = function (device : any) {
 	DeviceManager.connecDevice(device);
 }
+// 以下 helper 只在 App / H5 使用，条件编译避免被打进小程序 / 鸿蒙包
+// #ifdef APP-PLUS || H5
+// base64 字符串 -> Uint8Array（纯 JS 查表解码，大文件同样适用）
+const _base64ToUint8 = function (b64 : string) : Uint8Array {
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+	const map : any = {}
+	for (let i = 0; i < chars.length; i++) map[chars[i]] = i
+	const clean = (b64 || '').replace(/[^A-Za-z0-9+/=]/g, '')
+	const len = clean.length
+	const out = new Uint8Array((len >> 2) * 3)
+	let p = 0
+	for (let i = 0; i < len; i += 4) {
+		const c1 = map[clean[i]], c2 = map[clean[i + 1]], c3 = map[clean[i + 2]], c4 = map[clean[i + 3]]
+		if (c1 == null || c2 == null) break
+		out[p++] = (c1 << 2) | (c2 >> 4)
+		if (c3 != null && clean[i + 2] !== '=') out[p++] = ((c2 & 15) << 4) | (c3 >> 2); else break
+		if (c4 != null && clean[i + 3] !== '=') out[p++] = ((c3 & 3) << 6) | c4; else break
+	}
+	return out.subarray(0, p)
+}
+
+/**
+ * App / H5 读取本地临时文件为 Uint8Array（这两个平台没有 uni.getFileSystemManager）。
+ * 小程序 / 鸿蒙不经过这里，继续使用原有的 getFileSystemManager。
+ * - App：plus.io.FileReader（readAsDataURL + base64 解码）
+ * - H5：fetch
+ */
+const _readFileWithoutFsApi = function (filePath : string, callback : (data ?: Uint8Array, size ?: number, error ?: string) => void) {
+	// #ifdef APP-PLUS
+	// @ts-ignore
+	plus.io.resolveLocalFileSystemURL(filePath, (entry : any) => {
+		entry.file((file : any) => {
+			const expectSize = file.size || 0
+			// @ts-ignore
+			const reader = new plus.io.FileReader()
+			reader.onloadend = (evt : any) => {
+				const result : string = (evt.target && evt.target.result) || ''
+				// dataURL 形如 data:xxx;base64,AAAA...，只要逗号后面那段
+				const comma = result.indexOf(',')
+				const b64 = comma >= 0 ? result.substring(comma + 1) : result
+				const uint8 = _base64ToUint8(b64)
+				callback(uint8, expectSize || uint8.length)
+			}
+			reader.onerror = () => {
+				callback(undefined, 0, 'FileReader 读取文件失败')
+			}
+			reader.readAsDataURL(file)
+		}, (e : any) => {
+			callback(undefined, 0, '获取文件失败：' + ((e && e.message) || JSON.stringify(e)))
+		})
+	}, (e : any) => {
+		callback(undefined, 0, '打开文件失败(' + filePath + ')：' + ((e && e.message) || JSON.stringify(e)))
+	})
+	return
+	// #endif
+
+	// #ifdef H5
+	fetch(filePath).then((res) => res.arrayBuffer()).then((buffer) => {
+		const uint8 = new Uint8Array(buffer)
+		callback(uint8, uint8.length)
+	}).catch((err) => {
+		callback(undefined, 0, '读取文件失败：' + err)
+	})
+	return
+	// #endif
+}
+
+// App / H5 读取成功后的统一回调，结构与原有 getFileSystemManager 分支保持一致
+const _emitDialFileData = function (tempFilePaths : any, uint8 : Uint8Array | undefined, error : string | undefined, callback : any) {
+	if (!uint8 || uint8.length === 0) {
+		callback({
+			error: error || '读取表盘文件失败'
+		})
+		return
+	}
+	const fileName = tempFilePaths.name
+	const packResFormat = new PackResFormat()
+	const fileInfoData = packResFormat.getFileData(uint8, fileName + '.json')
+	if (fileInfoData == undefined) {
+		callback({
+			error: '获取文件信息失败'
+		})
+		return
+	}
+	callback({
+		fileName: fileName,
+		fileInfo: Uint8ArrayToString(fileInfoData),
+		lastModifyTime: tempFilePaths.time,
+		dialData: uint8
+	})
+}
+// #endif
+
 // 读取文件数据
 export const veepooJLGetFileDataManager = function (tempFilePaths : any, callback : any) {
+	// #ifdef APP-PLUS || H5
+	// 小程序 / 鸿蒙支持 uni.getFileSystemManager，继续走下方原有逻辑；
+	// 只有 App / H5 没有该 API（调用会抛 TypeError: uni.getFileSystemManager is not a function），才走各自平台的读取方式。
+	if (typeof (uni as any).getFileSystemManager !== 'function') {
+		// #ifdef APP-PLUS
+		_readFileWithoutFsApi(tempFilePaths.path, (uint8 : Uint8Array | undefined, _size : number | undefined, error : string | undefined) => {
+			_emitDialFileData(tempFilePaths, uint8, error, callback)
+		})
+		return
+		// #endif
+
+		// #ifdef H5
+		_readFileWithoutFsApi(tempFilePaths.path, (uint8 : Uint8Array | undefined, _size : number | undefined, error : string | undefined) => {
+			_emitDialFileData(tempFilePaths, uint8, error, callback)
+		})
+		return
+		// #endif
+	}
+	// #endif
+
+	// 以下为小程序 / 鸿蒙原有实现，保持不变
 	const fs = uni.getFileSystemManager()
 	fs.getFileInfo({
 		filePath: tempFilePaths.path,
@@ -81,12 +195,19 @@ export const veepooJLGetFileDataManager = function (tempFilePaths : any, callbac
 			})
 		}
 	})
-
 }
 
 // 传输表盘  
 export const veepooJLAddDialTransferStartManager = function (value : any, callback : any) {
-	RCSPOpSystemInfo?.getSystemInfo().then((systemInfo) => {
+	// 杰理设备未连接/已断开时 RCSPOpSystemInfo 为空，直接回调错误，避免卡住或抛出未处理的 Promise 异常
+	const systemInfoPromise = RCSPOpSystemInfo?.getSystemInfo()
+	if (!systemInfoPromise) {
+		callback({
+			error: '杰理设备未连接，请先点击"杰理认证"后再传输'
+		})
+		return
+	}
+	systemInfoPromise.then((systemInfo) => {
 		if (systemInfo.callStatus == 1) {//手表通话中
 			let result = {
 				callStatus: 1,
@@ -157,6 +278,10 @@ export const veepooJLAddDialTransferStartManager = function (value : any, callba
 				return
 			}
 		}
+	}).catch((error) => {
+		callback({
+			error: '获取设备状态失败，请确认杰理设备已连接：' + error
+		})
 	})
 }
 

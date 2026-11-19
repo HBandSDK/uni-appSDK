@@ -11,19 +11,23 @@
 			<view class="data-grid">
 				<view class="data-item">
 					<text class="data-label">手环状态</text>
-					<text class="data-value">{{device.content.wristbandStatus !== undefined ? device.content.wristbandStatus : '--'}}</text>
+					<text
+						class="data-value">{{device.content.wristbandStatus !== undefined ? device.content.wristbandStatus : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">导联佩戴</text>
-					<text class="data-value">{{device.content.wearStatus !== undefined ? device.content.wearStatus : '--'}}</text>
+					<text
+						class="data-value">{{device.content.wearStatus !== undefined ? device.content.wearStatus : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">HR1每秒</text>
-					<text class="data-value">{{device.content.HR1PerSecond !== undefined ? device.content.HR1PerSecond : '--'}}</text>
+					<text
+						class="data-value">{{device.content.HR1PerSecond !== undefined ? device.content.HR1PerSecond : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">HR2每分钟</text>
-					<text class="data-value">{{device.content.HR2PerHour !== undefined ? device.content.HR2PerHour : '--'}}</text>
+					<text
+						class="data-value">{{device.content.HR2PerHour !== undefined ? device.content.HR2PerHour : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">Hrv每秒</text>
@@ -31,19 +35,23 @@
 				</view>
 				<view class="data-item">
 					<text class="data-label">RR1每秒</text>
-					<text class="data-value">{{device.content.RR1PerSecond !== undefined ? device.content.RR1PerSecond : '--'}}</text>
+					<text
+						class="data-value">{{device.content.RR1PerSecond !== undefined ? device.content.RR1PerSecond : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">RR2每6秒</text>
-					<text class="data-value">{{device.content.RR2Per6Second !== undefined ? device.content.RR2Per6Second : '--'}}</text>
+					<text
+						class="data-value">{{device.content.RR2Per6Second !== undefined ? device.content.RR2Per6Second : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">BR1每秒</text>
-					<text class="data-value">{{device.content.BR2PerSecond !== undefined ? device.content.BR2PerSecond : '--'}}</text>
+					<text
+						class="data-value">{{device.content.BR2PerSecond !== undefined ? device.content.BR2PerSecond : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">BR2每分钟</text>
-					<text class="data-value">{{device.content.BR2PerHours !== undefined ? device.content.BR2PerHours : '--'}}</text>
+					<text
+						class="data-value">{{device.content.BR2PerHours !== undefined ? device.content.BR2PerHours : '--'}}</text>
 				</view>
 				<view class="data-item">
 					<text class="data-label">M_ID</text>
@@ -163,7 +171,9 @@
 				veepooBle.veepooUniAppSDKNotifyECGValueChange(function(e) {
 					if (e.name == 'ecg波形数据') {
 						totalArray.push(...e.content)
+						console.log('ecg原始报文数据=>', e.orignArray)
 						console.log('ecg波形数据', e.content)
+
 					}
 				})
 			},

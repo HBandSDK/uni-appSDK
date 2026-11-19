@@ -30,8 +30,7 @@
 					<view class="frame-head">
 						<text class="frame-index">#{{ item.index }}</text>
 						<text class="frame-len">{{ item.len }} 字节</text>
-						<text
-							:class="['frame-flag', item.isCustom ? 'ok' : 'bad']">{{ item.isCustom ? '0x04' : '非 0x04' }}</text>
+						<text :class="['frame-flag', item.isCustom ? 'ok' : 'bad']">{{ item.isCustom ? '0x04' : '非 0x04' }}</text>
 					</view>
 					<text class="frame-text">{{ item.text }}</text>
 				</view>
@@ -85,7 +84,7 @@
 			// 监听设备上报，只处理 0x04 自定义协议
 			registerNotify() {
 				const that = this
-				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
+				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function (e) {
 					if (!Array.isArray(e) || e[0] !== '04') return
 					const text = e.join(' ')
 					that.lastRecv = text
@@ -96,7 +95,7 @@
 			// 查询当前链路单包大小（MTU - 3），App 端取不到时按 20 字节兜底
 			onQueryPacketSize() {
 				const that = this
-				veepooBle.veepooUniAppSDKGetPacketSizeManager(function(res) {
+				veepooBle.veepooUniAppSDKGetPacketSizeManager(function (res) {
 					if (!res || !res.success) {
 						that.packetInfo = ''
 						that.log('查询单包大小失败：' + ((res && res.errMsg) || '未知错误'))
@@ -144,7 +143,7 @@
 					this.log(res.error)
 					return
 				}
-				this.frames = res.frames.map(function(f, i) {
+				this.frames = res.frames.map(function (f, i) {
 					return {
 						index: i + 1,
 						len: f.length,
@@ -164,7 +163,7 @@
 				}
 				this.onPreview()
 				const that = this
-				veepooBle.veepooUniAppSDKSendCustomDataFramesManager(res.frames, function(r) {
+				veepooBle.veepooUniAppSDKSendCustomDataFramesManager(res.frames, function (r) {
 					if (r && r.success) {
 						that.log('下发成功：共 ' + r.total + ' 帧', 'send')
 						return

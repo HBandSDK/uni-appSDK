@@ -75,7 +75,7 @@
 						"startTime": "00:00", // 开始时间
 						"stopTime": "00:00" // 结束时间
 					},
-					"p_meas_inv": 60, // 测量间隔 可修改  根据p_step_unit 大小  如30，那么间隔30
+					"p_meas_inv": 0, // 测量间隔 可修改  根据p_step_unit 大小  如30，那么间隔30
 					"p_cur_time_slot": { // 当前的测试时间段 可修改
 						"startTime": "00:00", // 开始时间
 						"stopTime": "00:00" // 结束时间
@@ -85,7 +85,7 @@
 
 			notifyMonitorValueChange() {
 				let self = this;
-				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function (e) {
+				veepooBle.veepooUniAppSDKNotifyMonitorValueChange(function(e) {
 					console.log("监听蓝牙回调=>", e);
 				})
 			},
@@ -113,5 +113,4 @@
 		font-size: 14px;
 		color: white;
 	}
-
 </style>

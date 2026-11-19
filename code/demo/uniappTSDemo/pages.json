@@ -343,10 +343,9 @@
 			}
 		},
 		{
-			"path" : "pages/customCommand/customCommand",
-			"style" : 
-			{
-				"navigationBarTitleText" : "通用指令下发"
+			"path": "pages/customCommand/customCommand",
+			"style": {
+				"navigationBarTitleText": "通用指令下发"
 			}
 		}
 	],

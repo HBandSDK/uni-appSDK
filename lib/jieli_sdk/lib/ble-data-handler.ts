@@ -21,20 +21,47 @@ const MAX_WRITE_RETRY = 10  // iOS 队列溢出时需要更多重试机会
 const WRITE_RETRY_BASE_DELAY = 50  // 退避基数增加到 50ms（原 20ms）
 // iOS 开环发送的间隔(ms)。iOS 上写入无回调可用，只能靠固定间隔控制发送节奏，
 // 每一包都吃这个间隔。调大会显著拉长升级耗时，调小可能导致设备收不全。
-const IOS_WRITE_INTERVAL = 80
+const IOS_WRITE_INTERVAL = 30
 /** 处理收到数据 */
+// #ifdef MP
+// 小程序端自己持有监听函数引用，便于重复注册时精确移除
+let _mpNotifyListener : ((res : any) => void) | undefined
+// #endif
 export var BleDataHandler = {
 	callbacks: Array<BleDataCallback>(),
 	_initialized: false,
 	init() {
+		// #ifdef MP
+		// 小程序端直接监听原生特征值变化，不依赖 Veepoo SDK 的多监听分发：
+		// SDK 的 addBleNotificationListener 走内部 transport 注册，断连/重置时内部监听表会被清空，
+		// 清空后杰理就再也收不到 AE02 回包（表现为杰理认证 5 秒超时、RCSP 指令重发 3 次后断开）。
+		// 每次 init（启动 + 进入页面）都重新注册一次，且只移除自己这一个监听，不影响 SDK 的监听。
+		if (_mpNotifyListener) {
+			try {
+				if (typeof (uni as any).offBLECharacteristicValueChange === 'function') {
+					uni.offBLECharacteristicValueChange(_mpNotifyListener)
+				}
+			} catch (e) { }
+		}
+		_mpNotifyListener = (res : any) => {
+			if (!res || !res.characteristicId) return
+			if (res.characteristicId.toLowerCase() !== UUID_NOTIFY.toLowerCase()) return
+			// [诊断] 打印每个收到的 AE02 notify 包，用于判断设备是否有回包
+			console.log('[OTA收包] AE02 byteLength=', res.value ? res.value.byteLength : 0)
+			this._handlerData(res)
+		}
+		uni.onBLECharacteristicValueChange(_mpNotifyListener)
+		// #endif
+
 		if (this._initialized) return
 		this._initialized = true
-		// 修改注册方式，UUID_NOTIFY
+		// #ifndef MP
 		veepooBle.addBleNotificationListener(UUID_NOTIFY, (_ : string[], res : WechatMiniprogram.OnBLECharacteristicValueChangeListenerResult) => {
 			// [诊断] 打印每个收到的 AE02 notify 包，用于判断设备是否有回包（认证/OTA 收不到数据时定位）
 			console.log('[OTA收包] AE02 byteLength=', res && res.value ? res.value.byteLength : 0)
 			this._handlerData(res);
 		})
+		// #endif
 	},
 	addCallbacks(callback : BleDataCallback) {
 		if (this.callbacks.indexOf(callback) == -1) {

@@ -331,7 +331,7 @@
 					path: '/pages/worldClock/worldClock'
 				},
 				{
-					name: '自定义指令',
+					name: '通用指令下发',
 					path: '/pages/customCommand/customCommand'
 				}
 				],
@@ -345,6 +345,7 @@
 		},
 		onShow() {
 			const vpJLBle = new veepooJLBle();
+
 			this.stopScan()
 			this.getPairData();
 			const bleInfo = uni.getStorageSync('bleInfo');
